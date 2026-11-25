@@ -1,0 +1,3376 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Quiz Runner - Edisi CPOB Farmasi (100 Soal)</title>
+  <!-- Google Fonts for playful cartoon arcade typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  <!-- Three.js r128 via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <style>
+    /* ==================== CSS VARIABLES & RESET ==================== */
+    :root {
+      --primary: #ff6b35;
+      --primary-dark: #d94e1f;
+      --secondary: #00b4d8;
+      --secondary-dark: #0077b6;
+      --accent: #ffd166;
+      --success: #06d6a0;
+      --success-dark: #059669;
+      --danger: #ef476f;
+      --danger-dark: #c9184a;
+      --purple: #7c3aed;
+      --surface: rgba(255, 255, 255, 0.94);
+      --surface-dark: rgba(15, 23, 42, 0.88);
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --radius-lg: 22px;
+      --radius-md: 14px;
+      --shadow-pop: 0 8px 0 rgba(15, 23, 42, 0.2), 0 14px 30px rgba(15, 23, 42, 0.22);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Nunito', sans-serif;
+      background: linear-gradient(180deg, #38bdf8 0%, #7dd3fc 50%, #bae6fd 100%);
+      color: var(--text-main);
+      touch-action: none;
+    }
+
+    h1, h2, h3, .font-display {
+      font-family: 'Fredoka', sans-serif;
+    }
+
+    /* ==================== GAME CANVAS ==================== */
+    #game-container {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    #game-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    /* Damage / Correct Fullscreen Flash */
+    #screen-flash {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.18s ease-out;
+      z-index: 15;
+    }
+
+    /* ==================== OVERLAY SCREENS ==================== */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      z-index: 30;
+      background: rgba(15, 23, 42, 0.48);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      overflow-y: auto;
+      touch-action: pan-y;
+    }
+
+    .overlay.hidden {
+      display: none !important;
+    }
+
+    .panel {
+      width: 100%;
+      max-width: 560px;
+      max-height: 94vh;
+      overflow-y: auto;
+      background: var(--surface);
+      border-radius: 26px;
+      border: 4px solid #ffffff;
+      box-shadow: 0 18px 48px rgba(15, 23, 42, 0.35), inset 0 2px 0 rgba(255,255,255,0.9);
+      padding: 20px 18px;
+      animation: popIn 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.88) translateY(20px); opacity: 0; }
+      to { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    /* ==================== MAIN MENU LOGO & HEADER ==================== */
+    .logo-wrap {
+      text-align: center;
+      margin-bottom: 14px;
+    }
+
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, #0ea5e9, #2563eb);
+      color: #fff;
+      font-size: 0.78rem;
+      font-weight: 800;
+      padding: 4px 12px;
+      border-radius: 999px;
+      letter-spacing: 0.5px;
+      box-shadow: 0 3px 0 #1d4ed8;
+      margin-bottom: 6px;
+    }
+
+    .game-title {
+      font-size: clamp(2rem, 7vw, 2.9rem);
+      font-weight: 700;
+      line-height: 1.02;
+      letter-spacing: 1px;
+      background: linear-gradient(180deg, #ff9f1c 0%, #ff5722 65%, #d90429 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 3px 0 #ffffff) drop-shadow(0 6px 0 rgba(15,23,42,0.18));
+      animation: floatTitle 2.8s ease-in-out infinite;
+    }
+
+    @keyframes floatTitle {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-4px); }
+    }
+
+    .game-subtitle {
+      font-size: 0.92rem;
+      font-weight: 800;
+      color: #334155;
+      margin-top: 4px;
+    }
+
+    .menu-stats-bar {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 10px 0 14px;
+      flex-wrap: wrap;
+    }
+
+    .stat-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #f1f5f9;
+      border: 2px solid #e2e8f0;
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    /* ==================== SECTION LABELS & SELECTORS ==================== */
+    .menu-section {
+      margin-bottom: 13px;
+    }
+
+    .section-label {
+      font-size: 0.78rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: #475569;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .select-input {
+      width: 100%;
+      padding: 11px 14px;
+      border-radius: 14px;
+      border: 2.5px solid #cbd5e1;
+      background: #ffffff;
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.94rem;
+      font-weight: 800;
+      color: #0f172a;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .select-input:focus {
+      border-color: var(--secondary);
+      box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.22);
+    }
+
+    /* Difficulty Buttons */
+    .diff-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .diff-btn {
+      padding: 9px 6px;
+      border-radius: 14px;
+      border: 2.5px solid #cbd5e1;
+      background: #f8fafc;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.16s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .diff-btn small {
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.68rem;
+      font-weight: 800;
+      opacity: 0.8;
+    }
+
+    .diff-btn.active[data-diff="easy"] {
+      background: linear-gradient(180deg, #34d399, #10b981);
+      border-color: #059669;
+      color: #fff;
+      box-shadow: 0 4px 0 #047857;
+      transform: translateY(-2px);
+    }
+
+    .diff-btn.active[data-diff="medium"] {
+      background: linear-gradient(180deg, #fbbf24, #f59e0b);
+      border-color: #d97706;
+      color: #fff;
+      box-shadow: 0 4px 0 #b45309;
+      transform: translateY(-2px);
+    }
+
+    .diff-btn.active[data-diff="hard"] {
+      background: linear-gradient(180deg, #fb7185, #e11d48);
+      border-color: #be123c;
+      color: #fff;
+      box-shadow: 0 4px 0 #9f1239;
+      transform: translateY(-2px);
+    }
+
+    /* Character Selection Cards */
+    .char-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    @media (max-width: 440px) {
+      .char-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .char-card {
+      background: #f8fafc;
+      border: 2.5px solid #cbd5e1;
+      border-radius: 16px;
+      padding: 8px 6px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .char-card:hover {
+      border-color: var(--secondary);
+    }
+
+    .char-card.active {
+      background: linear-gradient(180deg, #e0f2fe, #bae6fd);
+      border-color: #0284c7;
+      box-shadow: 0 4px 0 #0369a1;
+      transform: translateY(-2px);
+    }
+
+    .char-avatar {
+      width: 52px;
+      height: 52px;
+    }
+
+    .char-name {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #0f172a;
+      line-height: 1.15;
+    }
+
+    /* ==================== ARCADE BUTTONS ==================== */
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .btn {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1.08rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 16px;
+      padding: 13px 18px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.15s;
+      text-decoration: none;
+      letter-spacing: 0.4px;
+    }
+
+    .btn:active {
+      transform: translateY(3px);
+    }
+
+    .btn-play {
+      flex: 1;
+      background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+      color: #ffffff;
+      font-size: 1.25rem;
+      box-shadow: 0 6px 0 #15803d, 0 10px 20px rgba(22, 163, 74, 0.35);
+    }
+
+    .btn-play:active {
+      box-shadow: 0 2px 0 #15803d;
+    }
+
+    .btn-secondary {
+      background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+      color: #ffffff;
+      box-shadow: 0 6px 0 #0369a1;
+    }
+
+    .btn-secondary:active {
+      box-shadow: 0 2px 0 #0369a1;
+    }
+
+    .btn-amber {
+      background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+      color: #ffffff;
+      box-shadow: 0 6px 0 #b45309;
+    }
+
+    .btn-danger {
+      background: linear-gradient(180deg, #fb7185 0%, #e11d48 100%);
+      color: #ffffff;
+      box-shadow: 0 5px 0 #9f1239;
+    }
+
+    .btn-ghost {
+      background: #e2e8f0;
+      color: #1e293b;
+      box-shadow: 0 5px 0 #94a3b8;
+    }
+
+    .controls-hint {
+      text-align: center;
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: #64748b;
+      margin-top: 10px;
+    }
+
+    /* ==================== IN-GAME HUD ==================== */
+    #hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 10px 12px;
+    }
+
+    #hud.hidden {
+      display: none !important;
+    }
+
+    .hud-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .hud-left-col {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .hud-pill-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .hud-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(15, 23, 42, 0.76);
+      color: #ffffff;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(6px);
+      border-radius: 999px;
+      padding: 5px 11px;
+      font-weight: 800;
+      font-size: 0.88rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .hud-score {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1.05rem;
+      color: #fde047;
+    }
+
+    .hud-hearts {
+      display: inline-flex;
+      gap: 3px;
+      font-size: 1.05rem;
+      letter-spacing: 1px;
+    }
+
+    .heart-lost {
+      opacity: 0.25;
+      filter: grayscale(1);
+    }
+
+    .hud-right-col {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      pointer-events: auto;
+    }
+
+    .hud-icon-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      border: 2.5px solid #ffffff;
+      background: linear-gradient(180deg, #fbbf24, #f59e0b);
+      color: #ffffff;
+      font-size: 1.2rem;
+      font-weight: 900;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 0 #b45309, 0 6px 14px rgba(0,0,0,0.22);
+    }
+
+    .hud-icon-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #b45309;
+    }
+
+    /* Power-Up Active Timers */
+    #powerup-bar {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+
+    .pu-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      color: #fff;
+      font-weight: 900;
+      font-size: 0.78rem;
+      border: 2px solid rgba(255,255,255,0.6);
+      box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+      animation: popIn 0.25s ease;
+    }
+
+    .pu-magnet { background: linear-gradient(135deg, #ec4899, #db2777); }
+    .pu-shield { background: linear-gradient(135deg, #38bdf8, #0284c7); }
+    .pu-mult   { background: linear-gradient(135deg, #a855f7, #7c3aed); }
+
+    /* ==================== QUIZ BANNER OVERLAY (TOP) ==================== */
+    #quiz-hud {
+      width: 100%;
+      max-width: 720px;
+      margin: 6px auto 0;
+      transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.22s ease;
+      transform: translateY(-24px) scale(0.95);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #quiz-hud.active {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+
+    .quiz-card {
+      background: rgba(255, 255, 255, 0.96);
+      border: 3.5px solid #0284c7;
+      border-radius: 20px;
+      padding: 10px 14px 10px;
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.32);
+    }
+
+    .quiz-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 5px;
+      gap: 8px;
+    }
+
+    .quiz-cat-tag {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 900;
+      padding: 2px 9px;
+      border-radius: 999px;
+      letter-spacing: 0.4px;
+    }
+
+    .quiz-timer-track {
+      flex: 1;
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .quiz-timer-fill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #10b981, #fbbf24, #ef4444);
+      border-radius: 999px;
+      transition: width 0.08s linear;
+    }
+
+    .quiz-question-text {
+      font-family: 'Fredoka', sans-serif;
+      font-size: clamp(0.92rem, 2.8vw, 1.16rem);
+      font-weight: 600;
+      color: #0f172a;
+      line-height: 1.28;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .quiz-lanes-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+    }
+
+    .lane-opt {
+      border-radius: 13px;
+      padding: 7px 6px;
+      text-align: center;
+      color: #fff;
+      border: 2.5px solid transparent;
+      transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 54px;
+    }
+
+    .lane-opt.lane-left   { background: linear-gradient(180deg, #3b82f6, #1d4ed8); }
+    .lane-opt.lane-middle { background: linear-gradient(180deg, #f59e0b, #d97706); }
+    .lane-opt.lane-right  { background: linear-gradient(180deg, #8b5cf6, #6d28d9); }
+
+    .lane-opt.selected-lane {
+      transform: scale(1.06) translateY(-2px);
+      border-color: #fef08a;
+      box-shadow: 0 0 0 3px rgba(254, 240, 138, 0.75), 0 6px 14px rgba(0,0,0,0.28);
+    }
+
+    .lane-opt-dir {
+      font-size: 0.64rem;
+      font-weight: 900;
+      letter-spacing: 0.8px;
+      opacity: 0.92;
+      margin-bottom: 2px;
+    }
+
+    .lane-opt-text {
+      font-size: clamp(0.72rem, 2.2vw, 0.88rem);
+      font-weight: 900;
+      line-height: 1.15;
+      word-break: break-word;
+    }
+
+    /* ==================== FEEDBACK TOAST ==================== */
+    #feedback-toast {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.8);
+      padding: 12px 22px;
+      border-radius: 18px;
+      font-family: 'Fredoka', sans-serif;
+      font-size: clamp(1rem, 3.6vw, 1.35rem);
+      font-weight: 700;
+      color: #ffffff;
+      text-align: center;
+      max-width: 90vw;
+      pointer-events: none;
+      opacity: 0;
+      z-index: 25;
+      border: 3px solid rgba(255,255,255,0.85);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.32);
+      transition: opacity 0.2s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    #feedback-toast.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    #feedback-toast.toast-success { background: linear-gradient(135deg, #10b981, #059669); }
+    #feedback-toast.toast-error   { background: linear-gradient(135deg, #f43f5e, #be123c); }
+    #feedback-toast.toast-info    { background: linear-gradient(135deg, #0ea5e9, #2563eb); }
+    #feedback-toast.toast-gold    { background: linear-gradient(135deg, #f59e0b, #ea580c); }
+
+    /* ==================== ON-SCREEN TOUCH D-PAD ==================== */
+    #touch-controls {
+      pointer-events: auto;
+      display: none;
+      width: 100%;
+      max-width: 460px;
+      margin: 0 auto 4px;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 0 6px;
+    }
+
+    #touch-controls.visible {
+      display: flex;
+    }
+
+    .dpad-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    .dpad-btn {
+      width: 58px;
+      height: 58px;
+      border-radius: 18px;
+      border: 3px solid rgba(255, 255, 255, 0.85);
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(4px);
+      color: #ffffff;
+      font-size: 1.45rem;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.28);
+      touch-action: manipulation;
+    }
+
+    .dpad-btn:active {
+      background: rgba(56, 189, 248, 0.85);
+      transform: scale(0.92);
+    }
+
+    /* ==================== SETTINGS MODAL ==================== */
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 14px;
+      margin-bottom: 10px;
+      font-weight: 800;
+      color: #1e293b;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 54px;
+      height: 30px;
+      background: #cbd5e1;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.2s;
+      border: none;
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+      transition: transform 0.2s;
+    }
+
+    .toggle-switch.on {
+      background: #10b981;
+    }
+
+    .toggle-switch.on::after {
+      transform: translateX(24px);
+    }
+
+    /* ==================== GAME OVER STATS & REVIEW ==================== */
+    .new-record-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #fbbf24, #f97316);
+      color: #fff;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      padding: 4px 14px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+      box-shadow: 0 4px 0 #c2410c;
+      animation: pulseBadge 1.2s ease-in-out infinite;
+    }
+
+    @keyframes pulseBadge {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.07); }
+    }
+
+    .go-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 9px;
+      margin: 12px 0;
+    }
+
+    .go-stat-box {
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 15px;
+      padding: 10px 8px;
+      text-align: center;
+    }
+
+    .go-stat-label {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #64748b;
+      text-transform: uppercase;
+    }
+
+    .go-stat-val {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1.38rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-top: 2px;
+    }
+
+    .review-accordion {
+      margin-top: 10px;
+      border: 2px solid #fecdd3;
+      background: #fff1f2;
+      border-radius: 15px;
+      overflow: hidden;
+    }
+
+    .review-header {
+      width: 100%;
+      background: #ffe4e6;
+      border: none;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #be123c;
+      cursor: pointer;
+    }
+
+    .review-list {
+      max-height: 210px;
+      overflow-y: auto;
+      padding: 8px 12px;
+      display: none;
+    }
+
+    .review-list.open {
+      display: block;
+    }
+
+    .review-item {
+      background: #ffffff;
+      border-radius: 11px;
+      padding: 8px 10px;
+      margin-bottom: 7px;
+      border-left: 4px solid #e11d48;
+      font-size: 0.8rem;
+      text-align: left;
+    }
+
+    .review-item-q {
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 4px;
+    }
+
+    .review-item-wrong {
+      color: #e11d48;
+      font-weight: 700;
+    }
+
+    .review-item-correct {
+      color: #059669;
+      font-weight: 900;
+    }
+
+    /* Pause Overlay Small Panel */
+    .panel-sm {
+      max-width: 390px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <!-- 3D Canvas Container -->
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+  </div>
+
+  <!-- Fullscreen Feedback Flash -->
+  <div id="screen-flash"></div>
+
+  <!-- Center Floating Feedback Toast -->
+  <div id="feedback-toast">BENAR! +150</div>
+
+  <!-- ==================== IN-GAME HUD ==================== -->
+  <div id="hud" class="hidden">
+    <div>
+      <div class="hud-top">
+        <div class="hud-left-col">
+          <div class="hud-pill-row">
+            <div class="hud-pill">
+              <span>🏆</span>
+              <span class="hud-score" id="hud-score">0</span>
+            </div>
+            <div class="hud-pill">
+              <span>🪙</span>
+              <span id="hud-coins">0</span>
+            </div>
+            <div class="hud-pill">
+              <span class="hud-hearts" id="hud-hearts">❤️❤️❤️</span>
+            </div>
+          </div>
+          <div class="hud-pill-row">
+            <div class="hud-pill" style="font-size:0.76rem; padding:3px 10px;">
+              <span>⚡ Lv.<strong id="hud-level">1</strong></span>
+            </div>
+            <div class="hud-pill" style="font-size:0.76rem; padding:3px 10px;">
+              <span>📚 Kuis: <strong id="hud-quiz-count">0/0</strong></span>
+            </div>
+            <div class="hud-pill" id="hud-streak-pill" style="display:none; font-size:0.76rem; padding:3px 10px; background:rgba(234,88,12,0.88);">
+              <span>🔥 Streak <strong id="hud-streak">0</strong></span>
+            </div>
+          </div>
+          <!-- Active Power-Up Timer Pills -->
+          <div id="powerup-bar"></div>
+        </div>
+
+        <div class="hud-right-col">
+          <button class="hud-icon-btn" id="btn-pause" aria-label="Jeda" title="Jeda (Esc / P)">⏸</button>
+        </div>
+      </div>
+
+      <!-- Top Quiz Card Overlay -->
+      <div id="quiz-hud">
+        <div class="quiz-card">
+          <div class="quiz-meta">
+            <span class="quiz-cat-tag" id="quiz-cat-label">CPOB P09</span>
+            <div class="quiz-timer-track">
+              <div class="quiz-timer-fill" id="quiz-timer-fill"></div>
+            </div>
+            <span style="font-size:0.72rem; font-weight:900; color:#475569;" id="quiz-dist-label">PILIH JALUR!</span>
+          </div>
+          <div class="quiz-question-text" id="quiz-question-text">Pertanyaan akan muncul di sini...</div>
+          <div class="quiz-lanes-grid">
+            <div class="lane-opt lane-left" id="lane-opt-0">
+              <div class="lane-opt-dir">⬅️ KIRI</div>
+              <div class="lane-opt-text" id="lane-opt-text-0">-</div>
+            </div>
+            <div class="lane-opt lane-middle" id="lane-opt-1">
+              <div class="lane-opt-dir">⬆️ TENGAH</div>
+              <div class="lane-opt-text" id="lane-opt-text-1">-</div>
+            </div>
+            <div class="lane-opt lane-right" id="lane-opt-2">
+              <div class="lane-opt-dir">➡️ KANAN</div>
+              <div class="lane-opt-text" id="lane-opt-text-2">-</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Optional On-Screen Directional Controls (Mobile Convenience) -->
+    <div id="touch-controls">
+      <div class="dpad-group">
+        <button class="dpad-btn" id="btn-pad-left" aria-label="Kiri">⬅️</button>
+        <button class="dpad-btn" id="btn-pad-right" aria-label="Kanan">➡️</button>
+      </div>
+      <div class="dpad-group">
+        <button class="dpad-btn" id="btn-pad-slide" aria-label="Meluncur">⬇️</button>
+        <button class="dpad-btn" id="btn-pad-jump" aria-label="Melompat">⬆️</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MAIN MENU OVERLAY ==================== -->
+  <div id="menu-overlay" class="overlay">
+    <div class="panel">
+      <div class="logo-wrap">
+        <div class="logo-badge">💊 3D ENDLESS RUNNER EDUKATIF</div>
+        <h1 class="game-title">QUIZ RUNNER</h1>
+        <div class="game-subtitle">Edisi CPOB Farmasi (100 Soal)</div>
+      </div>
+
+      <div class="menu-stats-bar">
+        <div class="stat-chip">🏆 Skor Tertinggi: <span id="menu-highscore">0</span></div>
+        <div class="stat-chip">🪙 Total Koin: <span id="menu-total-coins">0</span></div>
+      </div>
+
+      <!-- Quiz Category Selector -->
+      <div class="menu-section">
+        <div class="section-label">📚 Kategori Kuis CPOB</div>
+        <select id="category-select" class="select-input">
+          <option value="ALL">Semua Materi (100 Soal)</option>
+          <option value="P09">Keluhan &amp; Recall — P09 (25 Soal)</option>
+          <option value="P10">Dokumentasi &amp; Alih Daya — P10 (25 Soal)</option>
+          <option value="P11">Kualifikasi &amp; Validasi I — P11 (25 Soal)</option>
+          <option value="P12">Kualifikasi &amp; Validasi II — P12 (25 Soal)</option>
+        </select>
+      </div>
+
+      <!-- Difficulty Selector -->
+      <div class="menu-section">
+        <div class="section-label">⚡ Tingkat Kesulitan</div>
+        <div class="diff-grid">
+          <button class="diff-btn" data-diff="easy">
+            <span>Mudah</span>
+            <small>Santai • Baca Lama</small>
+          </button>
+          <button class="diff-btn active" data-diff="medium">
+            <span>Sedang</span>
+            <small>Seimbang • 1.25x</small>
+          </button>
+          <button class="diff-btn" data-diff="hard">
+            <span>Sulit</span>
+            <small>Cepat • Bonus 1.5x</small>
+          </button>
+        </div>
+      </div>
+
+      <!-- Character Selection -->
+      <div class="menu-section">
+        <div class="section-label">🏃 Pilih Karakter Pelari</div>
+        <div class="char-grid" id="char-grid">
+          <!-- Populated dynamically with crisp inline SVG previews -->
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-play" id="btn-play">▶ MAIN SEKARANG</button>
+        <button class="btn btn-secondary" id="btn-settings" aria-label="Pengaturan" title="Pengaturan">⚙️</button>
+      </div>
+
+      <div class="controls-hint">
+        📱 Geser layar (Swipe) Kiri/Kanan/Atas/Bawah &nbsp;|&nbsp; 💻 Panah / WASD / Spasi
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SETTINGS MODAL ==================== -->
+  <div id="settings-overlay" class="overlay hidden">
+    <div class="panel panel-sm">
+      <h2 style="font-size:1.55rem; margin-bottom:14px; color:#0f172a;">⚙️ Pengaturan</h2>
+
+      <div class="setting-row">
+        <span>🔊 Efek Suara (SFX)</span>
+        <button class="toggle-switch on" id="toggle-sfx" aria-label="Toggle SFX"></button>
+      </div>
+
+      <div class="setting-row">
+        <span>🎮 Tombol Layar Sentuh</span>
+        <button class="toggle-switch" id="toggle-dpad" aria-label="Toggle Tombol Layar Sentuh"></button>
+      </div>
+
+      <div class="setting-row" style="flex-direction:column; align-items:stretch; gap:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span>🗑️ Reset Skor Tertinggi</span>
+          <button class="btn btn-danger" id="btn-reset-hs" style="padding:7px 14px; font-size:0.85rem;">Reset</button>
+        </div>
+        <div id="reset-confirm-box" style="display:none; font-size:0.8rem; color:#be123c; text-align:left; background:#ffe4e6; padding:8px 10px; border-radius:10px;">
+          Yakin ingin menghapus rekor skor &amp; total koin?
+          <div style="display:flex; gap:8px; margin-top:6px;">
+            <button class="btn btn-danger" id="btn-reset-yes" style="padding:5px 12px; font-size:0.8rem;">Ya, Hapus</button>
+            <button class="btn btn-ghost" id="btn-reset-no" style="padding:5px 12px; font-size:0.8rem;">Batal</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="btn-close-settings" style="width:100%;">✔ Selesai</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PAUSE OVERLAY ==================== -->
+  <div id="pause-overlay" class="overlay hidden">
+    <div class="panel panel-sm">
+      <h2 style="font-size:1.75rem; color:#0f172a; margin-bottom:6px;">⏸ Permainan Dijeda</h2>
+      <p style="font-size:0.88rem; font-weight:700; color:#64748b; margin-bottom:16px;">Tarik napas sejenak, lalu lanjutkan lari &amp; kuis CPOB!</p>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <button class="btn btn-play" id="btn-resume">▶ Lanjutkan</button>
+        <button class="btn btn-amber" id="btn-pause-restart">🔄 Mulai Ulang</button>
+        <button class="btn btn-ghost" id="btn-pause-menu">🏠 Menu Utama</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== GAME OVER OVERLAY ==================== -->
+  <div id="gameover-overlay" class="overlay hidden">
+    <div class="panel" style="text-align:center;">
+      <div id="go-new-record" class="new-record-badge" style="display:none;">🎉 REKOR BARU! 🎉</div>
+      <h2 style="font-size:1.85rem; color:#e11d48; margin-bottom:2px;">PERMAINAN SELESAI</h2>
+      <p id="go-reason" style="font-size:0.86rem; font-weight:700; color:#64748b;">Terus berlatih agar makin hafal materi CPOB!</p>
+
+      <div class="go-stats-grid">
+        <div class="go-stat-box">
+          <div class="go-stat-label">Skor Akhir</div>
+          <div class="go-stat-val" id="go-score" style="color:#ea580c;">0</div>
+        </div>
+        <div class="go-stat-box">
+          <div class="go-stat-label">Jawaban Benar</div>
+          <div class="go-stat-val" id="go-correct" style="color:#059669;">0/0 (0%)</div>
+        </div>
+        <div class="go-stat-box">
+          <div class="go-stat-label">Koin Terkumpul</div>
+          <div class="go-stat-val" id="go-coins" style="color:#d97706;">0</div>
+        </div>
+        <div class="go-stat-box">
+          <div class="go-stat-label">Level / Jarak</div>
+          <div class="go-stat-val" id="go-level-dist" style="color:#2563eb;">Lv.1 • 0m</div>
+        </div>
+      </div>
+
+      <!-- Expandable Review Missed Questions Section -->
+      <div class="review-accordion" id="review-accordion" style="display:none;">
+        <button class="review-header" id="btn-toggle-review">
+          <span>📖 Review Jawaban Salah (<span id="review-count">0</span>)</span>
+          <span id="review-chevron">▼</span>
+        </button>
+        <div class="review-list" id="review-list"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-play" id="btn-play-again">🔄 Main Lagi</button>
+        <button class="btn btn-ghost" id="btn-go-menu">🏠 Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /*************************************************************************
+     * QUIZ RUNNER - 3D ENDLESS RUNNER EDUCATIONAL QUIZ (CPOB FARMASI)
+     * Complete single-file Three.js + Web Audio API + 100 Verbatim Questions
+     *************************************************************************/
+
+    /* ==================== 1. COMPLETE 100-QUESTION BANK ==================== */
+    // a[0] is ALWAYS the correct option; runtime shuffles all 3 into Left/Middle/Right lanes.
+    const QUESTION_BANK = [
+      // ---- Category: P09 (Keluhan & Recall — 25 Soal) ----
+      { cat: "P09", q: "Bab CPOB 2024 yang mengatur Keluhan & Penarikan Produk adalah...", a: ["Bab 9", "Bab 10", "Bab 12"] },
+      { cat: "P09", q: "Regulasi BPOM terbaru (2026) tentang penarikan & pemusnahan obat adalah...", a: ["PerBPOM 12/2026", "PerBPOM 14/2022", "PerBPOM 34/2018"] },
+      { cat: "P09", q: "Tanggal mulai berlakunya Peraturan BPOM No. 12 Tahun 2026 adalah...", a: ["9 Juli 2026", "1 Januari 2026", "17 Agustus 2026"] },
+      { cat: "P09", q: "Peraturan BPOM 12/2026 menggantikan regulasi sebelumnya, yaitu...", a: ["PerBPOM 14/2022", "PerBPOM 6/2020", "PerBPOM 7/2024"] },
+      { cat: "P09", q: "Objek yang diperluas dalam PerBPOM 12/2026 meliputi...", a: ["Bahan obat & info produk", "Alat kesehatan saja", "Pangan & kosmetik"] },
+      { cat: "P09", q: "Acuan PIC/S GMP untuk Keluhan & Penarikan Produk terdapat pada...", a: ["Part I Chapter 8", "Part I Chapter 4", "Annex 15"] },
+      { cat: "P09", q: "Respons merugikan obat yang terjadi pada dosis lazim disebut...", a: ["Efek Samping Obat", "Cacat mutu fisik", "Produk diduga palsu"] },
+      { cat: "P09", q: "Jalur pelaporan khusus untuk Efek Samping Obat (ESO) adalah...", a: ["Farmakovigilans", "Validasi proses", "Kalibrasi alat"] },
+      { cat: "P09", q: "Tim yang harus independen dari pemasaran & penjualan saat recall adalah...", a: ["Tim QA", "Tim gudang", "Tim produksi"] },
+      { cat: "P09", q: "Produk steril terkontaminasi atau label salah kekuatan termasuk keluhan...", a: ["Kritis", "Mayor", "Minor"] },
+      { cat: "P09", q: "Disolusi di luar spesifikasi atau segel kemasan rusak termasuk keluhan...", a: ["Mayor", "Kritis", "Minor"] },
+      { cat: "P09", q: "Cacat kosmetik ringan tanpa dampak keamanan/khasiat termasuk keluhan...", a: ["Minor", "Kritis", "Mayor"] },
+      { cat: "P09", q: "Respons awal untuk keluhan risiko Kritis adalah...", a: ["Segera (≤ 24 jam)", "Maksimal 5 hari", "Maksimal 10 hari"] },
+      { cat: "P09", q: "Alat analisis akar masalah dengan bertanya 'mengapa' berulang kali...", a: ["5 Why", "Diagram Pareto", "Gantt Chart"] },
+      { cat: "P09", q: "Diagram tulang ikan (Ishikawa) menganalisis akar masalah memakai unsur...", a: ["6M (Man-Machine-dll)", "ALCOA+", "GAMP 5"] },
+      { cat: "P09", q: "Kepanjangan dari CAPA dalam sistem mutu adalah...", a: ["Corrective & Preventive", "Control & Audit", "Critical & Analysis"] },
+      { cat: "P09", q: "Memasang detektor bocor di semua lini blister agar tak terulang di lini lain...", a: ["Tindakan Preventif", "Tindakan Korektif", "Karantina produk"] },
+      { cat: "P09", q: "Memperbaiki setelan mesin pengemas penyebab blister bocor termasuk...", a: ["Tindakan Korektif", "Tindakan Preventif", "Mock recall"] },
+      { cat: "P09", q: "Penarikan obat atas inisiatif pemilik izin edar sendiri disebut...", a: ["Voluntary recall", "Mandatory recall", "Mock recall"] },
+      { cat: "P09", q: "Penarikan Kelas I ditetapkan untuk cacat mutu yang berisiko...", a: ["Fatal / cacat permanen", "Efek sementara", "Administratif saja"] },
+      { cat: "P09", q: "Tenggat laporan awal ke BPOM untuk penarikan Kelas I adalah...", a: ["1 x 24 jam", "5 hari", "10 hari"] },
+      { cat: "P09", q: "Tenggat laporan awal ke BPOM untuk penarikan Kelas II adalah...", a: ["5 hari", "1 x 24 jam", "10 hari"] },
+      { cat: "P09", q: "Tenggat laporan awal ke BPOM untuk penarikan Kelas III adalah...", a: ["10 hari", "5 hari", "30 hari"] },
+      { cat: "P09", q: "Rumus efektivitas penarikan produk adalah...", a: ["(R + U) / D x 100%", "R / (D + U) x 100%", "(D - R) / U x 100%"] },
+      { cat: "P09", q: "Simulasi berkala untuk menguji kecepatan & ketelusuran penarikan disebut...", a: ["Mock recall", "Trial injection", "Line clearance"] },
+
+      // ---- Category: P10 (Dokumentasi & Alih Daya — 25 Soal) ----
+      { cat: "P10", q: "Bab CPOB 2024 (PerBPOM 7/2024) yang mengatur Dokumentasi adalah...", a: ["Bab 10", "Bab 9", "Bab 11"] },
+      { cat: "P10", q: "Prinsip dasar dokumentasi di industri farmasi menyatakan...", a: ["Tak dicatat = tak ada", "Lisan lebih cepat", "Cukup diingat saja"] },
+      { cat: "P10", q: "Dokumen yang menggambarkan seluruh kegiatan CPOB di satu lokasi pabrik...", a: ["Site Master File", "Catatan Bets", "Sertifikat Analisis"] },
+      { cat: "P10", q: "Spesifikasi, Protap/SOP, dan Prosedur Induk termasuk kelompok dokumen...", a: ["Instruksi", "Catatan / Laporan", "Arsip musnah"] },
+      { cat: "P10", q: "CPB, CPKB, Log book alat, dan CoA termasuk kelompok dokumen...", a: ["Catatan / Laporan", "Instruksi", "Kebijakan Mutu"] },
+      { cat: "P10", q: "Dalam hierarki dokumen mutu, Kebijakan Mutu & SMF berada pada...", a: ["Tingkat 1", "Tingkat 2", "Tingkat 4"] },
+      { cat: "P10", q: "CPB, CPKB, formulir, dan laporan berada pada hierarki dokumen...", a: ["Tingkat 4", "Tingkat 1", "Tingkat 3"] },
+      { cat: "P10", q: "Dokumen yang sudah kedaluwarsa di area kerja harus...", a: ["Ditarik segera", "Dibiarkan di meja", "Ditutup tip-ex"] },
+      { cat: "P10", q: "Huruf 'A' pertama pada prinsip integritas data ALCOA+ berarti...", a: ["Attributable", "Accurate", "Available"] },
+      { cat: "P10", q: "Huruf 'L' pada ALCOA+ (terbaca dan permanen) adalah...", a: ["Legible", "Logical", "Limited"] },
+      { cat: "P10", q: "Huruf 'C' pada ALCOA+ (dicatat tepat saat kegiatan dilakukan) adalah...", a: ["Contemporaneous", "Confidential", "Commercial"] },
+      { cat: "P10", q: "Huruf 'O' pada ALCOA+ (catatan asli atau true copy) adalah...", a: ["Original", "Operational", "Official"] },
+      { cat: "P10", q: "Mengisi data sebelum kegiatan benar-benar dilakukan disebut...", a: ["Pre-recording", "Back-dating", "Line clearance"] },
+      { cat: "P10", q: "Mencatat tanggal mundur dari waktu pelaksanaan sebenarnya disebut...", a: ["Back-dating", "Pre-recording", "True copy"] },
+      { cat: "P10", q: "Cara koreksi kesalahan pencatatan yang benar sesuai GDocP adalah...", a: ["Coret 1 garis+paraf", "Tutup dengan tip-ex", "Robek halamannya"] },
+      { cat: "P10", q: "Kolom kosong yang tidak terpakai pada catatan bets harus diberi...", a: ["Garis atau 'NA'", "Biarkan kosong", "Tempel stiker"] },
+      { cat: "P10", q: "Pemeriksaan kesiapan jalur sebelum pengemasan pada CPKB disebut...", a: ["Line clearance", "Mock recall", "Trial injection"] },
+      { cat: "P10", q: "Masa simpan minimal catatan bets (CPB/CPKB) setelah tanggal ED adalah...", a: ["Min. 1 tahun pasca ED", "6 bulan pasca ED", "3 bulan pasca buat"] },
+      { cat: "P10", q: "Fitur sistem elektronik yang merekam siapa, kapan, & alasan perubahan...", a: ["Audit trail", "Line clearance", "Site Master File"] },
+      { cat: "P10", q: "Pada sistem hibrida, catatan asli yang paling sah secara integritas data...", a: ["Data elektronik+meta", "Cetakan kertas saja", "Fotokopi printout"] },
+      { cat: "P10", q: "Kegiatan Alih Daya diatur dalam CPOB 2024 pada...", a: ["Bab 11", "Bab 10", "Bab 12"] },
+      { cat: "P10", q: "Pada kegiatan alih daya, tanggung jawab akhir mutu produk tetap pada...", a: ["Pemberi kontrak", "Penerima kontrak", "Pihak ekspedisi"] },
+      { cat: "P10", q: "Pembuatan sebagian/seluruh proses produksi oleh industri lain disebut...", a: ["Toll manufacturing", "Mock recall", "Line clearance"] },
+      { cat: "P10", q: "Penerima kontrak mengalihkan tugas ke pihak ketiga tanpa izin pemberi...", a: ["Dilarang", "Boleh asal cepat", "Boleh tanpa lapor"] },
+      { cat: "P10", q: "Yang bertanggung jawab meluluskan bets untuk diedarkan pada alih daya...", a: ["Kepala QA Pemberi", "Operator Penerima", "Tim Pemasaran"] },
+
+      // ---- Category: P11 (Kualifikasi & Validasi I — 25 Soal) ----
+      { cat: "P11", q: "Kualifikasi dan Validasi diatur dalam CPOB 2024 pada...", a: ["Bab 12", "Bab 10", "Bab 11"] },
+      { cat: "P11", q: "Objek utama dari kegiatan Kualifikasi adalah...", a: ["Fasilitas & peralatan", "Proses & metode uji", "Strategi pemasaran"] },
+      { cat: "P11", q: "Objek utama dari kegiatan Validasi adalah...", a: ["Proses, metode, sistem", "Bangunan & gedung", "Lampu & meja kantor"] },
+      { cat: "P11", q: "Prinsip dasar Quality by Design (QbD) menyatakan mutu harus...", a: ["Dibangun dlm produk", "Diuji di akhir saja", "Ditambah saat kemas"] },
+      { cat: "P11", q: "Lapisan fondasi paling bawah pada piramida hierarki validasi adalah...", a: ["URS & Kajian Desain", "Validasi Proses", "IQ-OQ-PQ"] },
+      { cat: "P11", q: "Dokumen ringkas yang menjelaskan seluruh program kualifikasi & validasi...", a: ["RIV / VMP", "SMF", "CPB / CPKB"] },
+      { cat: "P11", q: "Kepanjangan bahasa Inggris dari RIV adalah...", a: ["Validation Master Plan", "Vendor Method Policy", "Verification Manual"] },
+      { cat: "P11", q: "Kapan protokol kualifikasi/validasi wajib disetujui oleh QA?", a: ["Sebelum pelaksanaan", "Sesudah uji selesai", "Saat produk dijual"] },
+      { cat: "P11", q: "Unsur baru pada sub-bab Kualifikasi CPOB 2018-2024 meliputi...", a: ["URS, FAT/SAT, Re-Kual", "Hanya IQ dan OQ", "Penghapusan DQ"] },
+      { cat: "P11", q: "Urutan tahapan kualifikasi peralatan yang benar adalah...", a: ["URS-DQ-FAT-IQ-OQ-PQ", "IQ-DQ-URS-PQ-OQ-FAT", "DQ-PQ-OQ-IQ-URS"] },
+      { cat: "P11", q: "Dokumen spesifikasi kebutuhan pengguna sebelum pengadaan alat disebut...", a: ["URS (SKP)", "Laporan PQ", "Protokol OQ"] },
+      { cat: "P11", q: "Verifikasi terdokumentasi bahwa desain memenuhi URS & CPOB disebut...", a: ["DQ (Kual. Desain)", "IQ (Kual. Instalasi)", "PQ (Kual. Kinerja)"] },
+      { cat: "P11", q: "Uji fungsi utama alat di pabrik pembuat sebelum dikirim disebut...", a: ["FAT", "SAT", "PQ"] },
+      { cat: "P11", q: "Uji penerimaan alat setelah tiba di lokasi pengguna (sebelum IQ)...", a: ["SAT", "FAT", "DQ"] },
+      { cat: "P11", q: "Pada Model-V, URS (Kebutuhan Pengguna) diverifikasi oleh tahap...", a: ["PQ (Kinerja)", "IQ (Instalasi)", "OQ (Operasional)"] },
+      { cat: "P11", q: "Pada Model-V, FS (Spesifikasi Fungsional) diverifikasi oleh tahap...", a: ["OQ (Operasional)", "IQ (Instalasi)", "PQ (Kinerja)"] },
+      { cat: "P11", q: "Pada Model-V, DS (Spesifikasi Desain) diverifikasi oleh tahap...", a: ["IQ (Instalasi)", "OQ (Operasional)", "PQ (Kinerja)"] },
+      { cat: "P11", q: "Tahap kualifikasi untuk memastikan komponen, utilitas & kalibrasi benar...", a: ["IQ (Instalasi)", "DQ (Desain)", "OQ (Operasional)"] },
+      { cat: "P11", q: "Tahap kualifikasi yang menguji alat berjalan sesuai rentang operasional...", a: ["OQ (Operasional)", "IQ (Instalasi)", "DQ (Desain)"] },
+      { cat: "P11", q: "Tahap kualifikasi yang menguji konsistensi alat pada produksi nyata...", a: ["PQ (Kinerja)", "FAT", "DQ"] },
+      { cat: "P11", q: "Autoklaf, mesin cetak tablet, & sistem WFI termasuk kategori...", a: ["Dampak Langsung", "Dampak Tak Langsung", "Tanpa Dampak"] },
+      { cat: "P11", q: "Lampu kantor & lift barang non-produksi (tanpa dampak) cukup menerapkan...", a: ["GEP", "IQ-OQ-PQ penuh", "Validasi 3 bets"] },
+      { cat: "P11", q: "Alat analisis risiko yang menghitung RPN (Severity x Occur x Detect)...", a: ["FMEA", "5 Why", "ALCOA+"] },
+      { cat: "P11", q: "Jika mesin blister dipindah/relokasi ke ruangan lain, yang diperlukan...", a: ["IQ ulang + OQ terbatas", "Tidak perlu apa-apa", "Cukup ganti label"] },
+      { cat: "P11", q: "Apakah dokumen FAT dari pemasok dapat meniadakan tahap IQ?", a: ["Tidak, IQ tetap wajib", "Ya, langsung produksi", "Ya, asal alat baru"] },
+
+      // ---- Category: P12 (Kualifikasi & Validasi II — 25 Soal) ----
+      { cat: "P12", q: "Pendekatan validasi proses yang TIDAK LAGI DITERIMA sejak CPOB 2018/2024...", a: ["Validasi Retrospektif", "Validasi Prospektif", "Verifikasi Kontinu"] },
+      { cat: "P12", q: "Tiga tahap siklus hidup validasi proses modern yang benar adalah...", a: ["Desain-PPQ-Verif.Kont", "IQ-OQ-Retrospektif", "Uji-Jual-Recall"] },
+      { cat: "P12", q: "Jumlah bets minimal yang lazim pada validasi proses tradisional adalah...", a: ["3 bets berturut-turut", "1 bets acak", "10 bets historis"] },
+      { cat: "P12", q: "Validasi konkuren hanya diperbolehkan dalam kondisi...", a: ["Luar biasa & izin QA", "Semua produk rutin", "Target jual naik"] },
+      { cat: "P12", q: "Singkatan CQA dalam validasi proses berarti...", a: ["Critical Quality Attr.", "Control Quality Audit", "Certified Quality Aid"] },
+      { cat: "P12", q: "Singkatan CPP dalam validasi proses berarti...", a: ["Critical Process Param", "Clean Process Protap", "Current Product Plan"] },
+      { cat: "P12", q: "Gaya tekan dan kecepatan mesin pada pencetakan tablet merupakan contoh...", a: ["CPP", "CQA", "PDE"] },
+      { cat: "P12", q: "Target nilai indeks kemampuan proses (Cpk) agar dianggap mampu adalah...", a: ["Cpk ≥ 1,33", "Cpk < 1,00", "Cpk = 0,50"] },
+      { cat: "P12", q: "Pedoman ICH terbaru tentang Validasi Metode Analisis adalah...", a: ["ICH Q2(R2)", "ICH Q10", "ICH Q3C"] },
+      { cat: "P12", q: "Untuk metode kompendial (FI, USP, BP), laboratorium pengguna cukup...", a: ["Verifikasi metode", "Validasi penuh awal", "Langsung pakai saja"] },
+      { cat: "P12", q: "Kriteria lazim akurasi (% perolehan kembali) penetapan kadar adalah...", a: ["98% - 102%", "80% - 120%", "50% - 150%"] },
+      { cat: "P12", q: "Kriteria lazim presisi (RSD) untuk metode penetapan kadar adalah...", a: ["RSD ≤ 2%", "RSD ≤ 10%", "RSD ≥ 5%"] },
+      { cat: "P12", q: "Rumus batas deteksi (LOD) dalam validasi metode analisis adalah...", a: ["3,3 σ / S", "10 σ / S", "1,5 σ / S"] },
+      { cat: "P12", q: "Rumus batas kuantitasi (LOQ) dalam validasi metode analisis adalah...", a: ["10 σ / S", "3,3 σ / S", "2 σ / S"] },
+      { cat: "P12", q: "Kriteria lazim resolusi (Rs) untuk spesifisitas puncak kromatografi...", a: ["Rs ≥ 1,5", "Rs ≤ 0,5", "Rs = 0,1"] },
+      { cat: "P12", q: "Batas residu validasi pembersihan CPOB 2018/2024 ditetapkan berbasis...", a: ["Toksikologi (PDE/HBEL)", "Harga jual obat", "Tebakan operator"] },
+      { cat: "P12", q: "Pembersihan otomatis tanpa membongkar komponen peralatan disebut...", a: ["CIP (Clean in Place)", "COP (Clean out Place)", "Cuci manual"] },
+      { cat: "P12", q: "Rumus menghitung PDE (Permitted Daily Exposure) adalah...", a: ["(NOAELxBB)/(F1..F5)", "(PDE x MBS) / TDD", "(SD / x) x 100%"] },
+      { cat: "P12", q: "Berat badan (BB) penyesuaian standar pada rumus PDE adalah...", a: ["50 kg", "70 kg", "100 kg"] },
+      { cat: "P12", q: "Rumus menghitung MACO (Maximum Allowable Carryover) berbasis PDE...", a: ["(PDE x MBS) / TDD", "(NOAEL x BB) / F1", "(R + U) / D x 100%"] },
+      { cat: "P12", q: "Produk dengan PDE sangat rendah (< 10 µg/hari, mis. sitostatik) disarankan...", a: ["Alat/fasilitas khusus", "Cuci ulang sampai oke", "Satu lini dgn vitamin"] },
+      { cat: "P12", q: "Sampling residu langsung di area terukur (mis. 5x5 cm) pada titik sulit...", a: ["Swab (usap)", "Bilasan (rinse)", "Visual saja"] },
+      { cat: "P12", q: "Strategi 'membersihkan ulang sampai lolos uji' pada validasi pembersihan...", a: ["Tidak dapat diterima", "Boleh asal cepat", "Wajib 5 kali ulang"] },
+      { cat: "P12", q: "Pedoman validasi sistem komputerisasi berbasis risiko yang digunakan...", a: ["ISPE GAMP 5", "ICH Q2(R2)", "PerBPOM 12/2026"] },
+      { cat: "P12", q: "LIMS, ERP, dan CDS (HPLC) dalam kategori perangkat lunak GAMP 5 adalah...", a: ["Kategori 4 (Konfig.)", "Kategori 1 (Infra)", "Kategori 5 (Custom)"] }
+    ];
+
+    const CATEGORY_NAMES = {
+      P09: "P09 • Keluhan & Recall",
+      P10: "P10 • Dokumentasi & Alih Daya",
+      P11: "P11 • Kualifikasi & Validasi I",
+      P12: "P12 • Kualifikasi & Validasi II"
+    };
+
+    /* ==================== 2. CHARACTER PRESETS ==================== */
+    const CHARACTERS = [
+      {
+        id: "apoteker",
+        name: "Apoteker Muda",
+        torso: 0xf8fafc,
+        accent: 0x0d9488,
+        pants: 0x1e3a8a,
+        shoes: 0x0f766e,
+        skin: 0xffd1aa,
+        headgearType: "cap",
+        headgearColor: 0x14b8a6,
+        svg: `<svg viewBox="0 0 64 64" class="char-avatar"><circle cx="32" cy="32" r="30" fill="#ccfbf1"/><rect x="20" y="34" width="24" height="22" rx="7" fill="#ffffff" stroke="#0d9488" stroke-width="2.5"/><path d="M32 36v18" stroke="#0d9488" stroke-width="2.5"/><circle cx="32" cy="24" r="10" fill="#ffd1aa"/><path d="M21 20c2-7 20-7 22 0z" fill="#14b8a6"/><rect x="20" y="18" width="24" height="4" rx="2" fill="#0f766e"/><circle cx="29" cy="24" r="1.5" fill="#1e293b"/><circle cx="35" cy="24" r="1.5" fill="#1e293b"/><path d="M29 28q3 2.5 6 0" stroke="#1e293b" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>`
+      },
+      {
+        id: "sprinter",
+        name: "Lab Sprinter",
+        torso: 0x38bdf8,
+        accent: 0x0284c7,
+        pants: 0x334155,
+        shoes: 0xfacc15,
+        skin: 0xf5c095,
+        headgearType: "visor",
+        headgearColor: 0xfacc15,
+        svg: `<svg viewBox="0 0 64 64" class="char-avatar"><circle cx="32" cy="32" r="30" fill="#e0f2fe"/><rect x="19" y="34" width="26" height="22" rx="8" fill="#38bdf8" stroke="#0284c7" stroke-width="2.5"/><circle cx="32" cy="24" r="10" fill="#f5c095"/><path d="M22 19h20v4H22z" fill="#facc15"/><path d="M22 18c2-6 18-6 20 0" fill="#1e293b"/><circle cx="29" cy="25" r="1.5" fill="#1e293b"/><circle cx="35" cy="25" r="1.5" fill="#1e293b"/><path d="M29 29q3 2.5 6 0" stroke="#1e293b" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>`
+      },
+      {
+        id: "capsule",
+        name: "Capsule Hero",
+        torso: 0xef4444,
+        accent: 0xffffff,
+        pants: 0xffffff,
+        shoes: 0xdc2626,
+        skin: 0xffd6b3,
+        headgearType: "headband",
+        headgearColor: 0xef4444,
+        svg: `<svg viewBox="0 0 64 64" class="char-avatar"><circle cx="32" cy="32" r="30" fill="#fee2e2"/><rect x="20" y="34" width="24" height="11" rx="5" fill="#ef4444"/><rect x="20" y="44" width="24" height="12" rx="5" fill="#ffffff" stroke="#ef4444" stroke-width="2"/><circle cx="32" cy="24" r="10" fill="#ffd6b3"/><rect x="21" y="17" width="22" height="4.5" rx="2" fill="#ef4444"/><circle cx="29" cy="25" r="1.5" fill="#1e293b"/><circle cx="35" cy="25" r="1.5" fill="#1e293b"/><path d="M29 29q3 2.5 6 0" stroke="#1e293b" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>`
+      },
+      {
+        id: "cyber",
+        name: "Cyber Runner",
+        torso: 0x7c3aed,
+        accent: 0x22d3ee,
+        pants: 0x1e1b4b,
+        shoes: 0x06b6d4,
+        skin: 0xf3c6a5,
+        headgearType: "goggles",
+        headgearColor: 0x22d3ee,
+        svg: `<svg viewBox="0 0 64 64" class="char-avatar"><circle cx="32" cy="32" r="30" fill="#ede9fe"/><rect x="19" y="34" width="26" height="22" rx="8" fill="#7c3aed" stroke="#22d3ee" stroke-width="2.5"/><circle cx="32" cy="24" r="10" fill="#f3c6a5"/><rect x="22" y="19" width="20" height="7" rx="3.5" fill="#0f172a"/><rect x="24" y="21" width="7" height="3.5" rx="1.5" fill="#22d3ee"/><rect x="33" y="21" width="7" height="3.5" rx="1.5" fill="#22d3ee"/><path d="M29 29q3 2 6 0" stroke="#1e293b" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>`
+      }
+    ];
+
+    /* ==================== 3. DIFFICULTY CONFIG ==================== */
+    const DIFFICULTY_CFG = {
+      easy:   { baseSpeed: 16.5, maxSpeed: 28, accel: 0.14, quizInterval: 11.5, quizReadSec: 5.8, scoreMult: 1.0 },
+      medium: { baseSpeed: 21.0, maxSpeed: 36, accel: 0.20, quizInterval: 10.5, quizReadSec: 4.9, scoreMult: 1.25 },
+      hard:   { baseSpeed: 25.5, maxSpeed: 44, accel: 0.28, quizInterval: 9.8,  quizReadSec: 4.3, scoreMult: 1.5 }
+    };
+
+    const LANE_X = [-2.8, 0, 2.8]; // Left, Middle, Right
+
+    /* ==================== 4. SYNTHESIZED WEB AUDIO SFX ==================== */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+
+      init() {
+        if (!this.ctx) {
+          try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) this.ctx = new AudioCtx();
+          } catch (e) {
+            console.warn("AudioContext unavailable:", e);
+          }
+        }
+        if (this.ctx && this.ctx.state === "suspended") {
+          this.ctx.resume().catch(() => {});
+        }
+      }
+
+      tone(freq, dur, type = "sine", vol = 0.14, delay = 0, slideTo = null) {
+        if (!this.enabled) return;
+        try {
+          this.init();
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime + delay;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, now);
+          if (slideTo) {
+            osc.frequency.exponentialRampToValueAtTime(slideTo, now + dur);
+          }
+          gain.gain.setValueAtTime(0.0001, now);
+          gain.gain.linearRampToValueAtTime(vol, now + 0.012);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + dur + 0.02);
+        } catch (e) {}
+      }
+
+      playCoin() {
+        this.tone(987.77, 0.09, "sine", 0.13, 0);
+        this.tone(1318.51, 0.14, "sine", 0.13, 0.06);
+      }
+
+      playJump() {
+        this.tone(280, 0.18, "triangle", 0.16, 0, 620);
+      }
+
+      playSlide() {
+        this.tone(360, 0.16, "sawtooth", 0.08, 0, 140);
+      }
+
+      playLane() {
+        this.tone(420, 0.07, "sine", 0.08, 0, 540);
+      }
+
+      playPowerUp() {
+        this.tone(523.25, 0.1, "triangle", 0.15, 0);
+        this.tone(659.25, 0.1, "triangle", 0.15, 0.07);
+        this.tone(783.99, 0.1, "triangle", 0.15, 0.14);
+        this.tone(1046.5, 0.22, "triangle", 0.16, 0.21);
+      }
+
+      playCorrect() {
+        this.tone(587.33, 0.1, "triangle", 0.18, 0);
+        this.tone(880.0, 0.12, "triangle", 0.18, 0.08);
+        this.tone(1174.66, 0.26, "sine", 0.18, 0.16);
+      }
+
+      playWrong() {
+        this.tone(240, 0.16, "sawtooth", 0.14, 0, 180);
+        this.tone(175, 0.28, "sawtooth", 0.14, 0.14, 120);
+      }
+
+      playCrash() {
+        this.tone(150, 0.22, "sawtooth", 0.18, 0, 55);
+        this.tone(95, 0.25, "square", 0.12, 0.03, 40);
+      }
+
+      playShieldBlock() {
+        this.tone(720, 0.12, "sine", 0.15, 0, 320);
+        this.tone(480, 0.18, "triangle", 0.14, 0.08, 660);
+      }
+
+      playLevelUp() {
+        [523, 659, 784, 1046].forEach((f, idx) => {
+          this.tone(f, 0.14, "sine", 0.14, idx * 0.07);
+        });
+      }
+
+      playGameOver() {
+        this.tone(392, 0.18, "triangle", 0.16, 0);
+        this.tone(349.23, 0.18, "triangle", 0.16, 0.18);
+        this.tone(329.63, 0.18, "triangle", 0.16, 0.36);
+        this.tone(261.63, 0.45, "sawtooth", 0.14, 0.54);
+      }
+    }
+
+    const sfx = new SoundEngine();
+
+    /* ==================== 5. PERSISTENCE & GAME STATE ==================== */
+    const STORAGE_KEY = "quiz_runner_cpob_v1";
+    let savedData = {
+      highScore: 0,
+      totalCoins: 0,
+      sfxEnabled: true,
+      dpadEnabled: false,
+      selectedChar: "apoteker",
+      selectedCategory: "ALL",
+      selectedDifficulty: "medium"
+    };
+
+    function loadSavedData() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          savedData = Object.assign(savedData, parsed);
+        }
+      } catch (e) {}
+      // Auto-detect coarse pointer for convenient default D-pad only if never set
+      sfx.enabled = savedData.sfxEnabled;
+    }
+
+    function persistData() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(savedData));
+      } catch (e) {}
+    }
+
+    const state = {
+      mode: "menu", // 'menu', 'playing', 'paused', 'gameover'
+      score: 0,
+      coins: 0,
+      lives: 3,
+      maxLives: 3,
+      level: 1,
+      distance: 0,
+      speed: 20,
+      streak: 0,
+      quizAnswered: 0,
+      quizCorrect: 0,
+      missedQuestions: [],
+
+      // Player physics
+      laneIndex: 1, // 0=left, 1=middle, 2=right
+      playerX: 0,
+      playerY: 0,
+      velY: 0,
+      isJumping: false,
+      isSliding: false,
+      slideTimer: 0,
+      invulnTimer: 0,
+      runAnimTime: 0,
+
+      // Power-ups
+      magnetTimer: 0,
+      shieldActive: false,
+      multTimer: 0,
+
+      // Spawning & Quiz
+      obstacleTimer: 1.2,
+      coinTimer: 0.6,
+      powerUpTimer: 9.0,
+      quizTimer: 8.5,
+      activeQuiz: null, // { group, z, startZ, questionObj, laneAnswers: [str,str,str], correctLane: 0|1|2, textures: [] }
+      questionDeck: [],
+
+      // Camera effects & optional mouse drag angle
+      shakeTimer: 0,
+      shakeIntensity: 0,
+      camOrbitX: 0,
+      camOrbitY: 0,
+      isDraggingCam: false,
+      dragLastX: 0,
+      dragLastY: 0
+    };
+
+    /* ==================== 6. THREE.JS SCENE GLOBALS ==================== */
+    let scene, camera, renderer, clock;
+    let playerGroup, playerRig = {};
+    let shieldMesh, magnetRingMesh;
+    let trackSegments = [];
+    let sceneryGroups = [];
+    let obstacles = [];
+    let coins = [];
+    let powerUps = [];
+    let particles = [];
+    let clouds = [];
+
+    // Shared reusable geometries & materials for performance
+    const sharedGeo = {};
+    const sharedMat = {};
+
+    /* ==================== 7. THREE.JS INITIALIZATION ==================== */
+    function initThree() {
+      const canvas = document.getElementById("game-canvas");
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x74c7ff);
+      scene.fog = new THREE.Fog(0x8fd6ff, 58, 165);
+
+      camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 220);
+      camera.position.set(0, 5.2, 8.8);
+      camera.lookAt(0, 2.0, -14);
+
+      renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      // Bright colorful daylight lighting
+      const hemiLight = new THREE.HemisphereLight(0xffffff, 0x6ee7b7, 0.85);
+      hemiLight.position.set(0, 50, 0);
+      scene.add(hemiLight);
+
+      const dirLight = new THREE.DirectionalLight(0xfffbeb, 0.95);
+      dirLight.position.set(18, 34, 20);
+      dirLight.castShadow = true;
+      dirLight.shadow.mapSize.width = 1024;
+      dirLight.shadow.mapSize.height = 1024;
+      dirLight.shadow.camera.near = 2;
+      dirLight.shadow.camera.far = 110;
+      const d = 28;
+      dirLight.shadow.camera.left = -d;
+      dirLight.shadow.camera.right = d;
+      dirLight.shadow.camera.top = d;
+      dirLight.shadow.camera.bottom = -d;
+      dirLight.shadow.bias = -0.001;
+      scene.add(dirLight);
+
+      // Stylized bright sun disc in the sky
+      const sunMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(5.5, 16, 16),
+        new THREE.MeshBasicMaterial({ color: 0xfff3a1 })
+      );
+      sunMesh.position.set(34, 42, -130);
+      scene.add(sunMesh);
+
+      initSharedAssets();
+      buildEnvironment();
+      buildClouds();
+      buildPlayer(savedData.selectedChar);
+
+      clock = new THREE.Clock();
+
+      window.addEventListener("resize", onWindowResize);
+    }
+
+    function createWindowTexture(bgHex, winHex) {
+      const c = document.createElement("canvas");
+      c.width = 128;
+      c.height = 256;
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = bgHex;
+      ctx.fillRect(0, 0, 128, 256);
+
+      // Subtle facade stripes
+      ctx.fillStyle = "rgba(255,255,255,0.08)";
+      ctx.fillRect(0, 0, 128, 12);
+
+      // Stylized cartoon windows grid
+      for (let row = 0; row < 7; row++) {
+        for (let col = 0; col < 3; col++) {
+          const x = 14 + col * 36;
+          const y = 20 + row * 32;
+          ctx.fillStyle = "#1e293b";
+          ctx.fillRect(x - 2, y - 2, 26, 22);
+          ctx.fillStyle = Math.random() > 0.25 ? winHex : "#94a3b8";
+          ctx.fillRect(x, y, 22, 18);
+          // Window shine
+          ctx.fillStyle = "rgba(255,255,255,0.45)";
+          ctx.fillRect(x + 2, y + 2, 6, 14);
+        }
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+
+    function createHazardTexture() {
+      const c = document.createElement("canvas");
+      c.width = 256;
+      c.height = 64;
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = "#f97316";
+      ctx.fillRect(0, 0, 256, 64);
+      ctx.fillStyle = "#ffffff";
+      for (let i = -64; i < 320; i += 48) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i + 24, 0);
+        ctx.lineTo(i - 8, 64);
+        ctx.lineTo(i - 32, 64);
+        ctx.closePath();
+        ctx.fill();
+      }
+      return new THREE.CanvasTexture(c);
+    }
+
+    function createOverheadSignTexture() {
+      const c = document.createElement("canvas");
+      c.width = 256;
+      c.height = 96;
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = "#e11d48";
+      ctx.fillRect(0, 0, 256, 96);
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 6;
+      ctx.strokeRect(6, 6, 244, 84);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 36px Fredoka, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("⬇ SLIDE ⬇", 128, 48);
+      return new THREE.CanvasTexture(c);
+    }
+
+    function initSharedAssets() {
+      // Coin geometry & glossy gold material
+      sharedGeo.coin = new THREE.CylinderGeometry(0.45, 0.45, 0.14, 16);
+      sharedGeo.coin.rotateX(Math.PI / 2);
+      sharedMat.coin = new THREE.MeshStandardMaterial({
+        color: 0xffd700,
+        emissive: 0xaa6600,
+        emissiveIntensity: 0.25,
+        metalness: 0.72,
+        roughness: 0.22
+      });
+
+      // Hazard & Overhead Sign materials
+      sharedMat.hazard = new THREE.MeshLambertMaterial({ map: createHazardTexture() });
+      sharedMat.overheadSign = new THREE.MeshLambertMaterial({ map: createOverheadSignTexture() });
+      sharedMat.darkMetal = new THREE.MeshLambertMaterial({ color: 0x334155 });
+      sharedMat.rail = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.65, roughness: 0.3 });
+      sharedMat.sleeper = new THREE.MeshLambertMaterial({ color: 0x785032 });
+
+      // Building textures
+      const palettes = [
+        ["#ff6b6b", "#fef08a"],
+        ["#4ecdc4", "#e0f2fe"],
+        ["#ffd166", "#ffffff"],
+        ["#8b5cf6", "#fde047"],
+        ["#3b82f6", "#bae6fd"],
+        ["#f97316", "#fffbeb"],
+        ["#ec4899", "#fce7f3"]
+      ];
+      sharedMat.buildings = palettes.map(([bg, win]) =>
+        new THREE.MeshLambertMaterial({ map: createWindowTexture(bg, win) })
+      );
+
+      // Particle geometry
+      sharedGeo.particle = new THREE.BoxGeometry(0.22, 0.22, 0.22);
+    }
+
+    /* ==================== 8. ENVIRONMENT (TRACKS + CITY) ==================== */
+    const SEGMENT_LEN = 24;
+    const NUM_SEGMENTS = 9;
+
+    function buildTrackSegment(zPos) {
+      const seg = new THREE.Group();
+      seg.position.z = zPos;
+
+      // Wide ground apron (urban plaza / grass outer edge)
+      const outerGround = new THREE.Mesh(
+        new THREE.PlaneGeometry(90, SEGMENT_LEN),
+        new THREE.MeshLambertMaterial({ color: 0x65a30d })
+      );
+      outerGround.rotation.x = -Math.PI / 2;
+      outerGround.position.y = -0.06;
+      outerGround.receiveShadow = true;
+      seg.add(outerGround);
+
+      // Main tiled urban trackbed road
+      const road = new THREE.Mesh(
+        new THREE.PlaneGeometry(11.6, SEGMENT_LEN),
+        new THREE.MeshLambertMaterial({ color: 0x64748b })
+      );
+      road.rotation.x = -Math.PI / 2;
+      road.position.y = 0;
+      road.receiveShadow = true;
+      seg.add(road);
+
+      // Left & right raised urban sidewalks
+      const sidewalkGeo = new THREE.BoxGeometry(3.4, 0.28, SEGMENT_LEN);
+      const sidewalkMat = new THREE.MeshLambertMaterial({ color: 0xe2e8f0 });
+      [-7.4, 7.4].forEach(sx => {
+        const sw = new THREE.Mesh(sidewalkGeo, sidewalkMat);
+        sw.position.set(sx, 0.14, 0);
+        sw.receiveShadow = true;
+        seg.add(sw);
+      });
+
+      // Colored curb stripes
+      const curbGeo = new THREE.BoxGeometry(0.26, 0.3, SEGMENT_LEN);
+      const curbMat = new THREE.MeshLambertMaterial({ color: 0xf59e0b });
+      [-5.75, 5.75].forEach(cx => {
+        const curb = new THREE.Mesh(curbGeo, curbMat);
+        curb.position.set(cx, 0.15, 0);
+        seg.add(curb);
+      });
+
+      // 3 Parallel Train Tracks
+      const railGeo = new THREE.BoxGeometry(0.14, 0.12, SEGMENT_LEN);
+      const sleeperGeo = new THREE.BoxGeometry(1.9, 0.08, 0.35);
+      const gravelGeo = new THREE.PlaneGeometry(2.3, SEGMENT_LEN);
+      const gravelMat = new THREE.MeshLambertMaterial({ color: 0x94a3b8 });
+
+      LANE_X.forEach(lx => {
+        const gravel = new THREE.Mesh(gravelGeo, gravelMat);
+        gravel.rotation.x = -Math.PI / 2;
+        gravel.position.set(lx, 0.015, 0);
+        gravel.receiveShadow = true;
+        seg.add(gravel);
+
+        // Rails
+        [-0.7, 0.7].forEach(rx => {
+          const rail = new THREE.Mesh(railGeo, sharedMat.rail);
+          rail.position.set(lx + rx, 0.09, 0);
+          seg.add(rail);
+        });
+
+        // Sleepers
+        for (let sz = -SEGMENT_LEN / 2 + 1.2; sz < SEGMENT_LEN / 2; sz += 2.4) {
+          const sleeper = new THREE.Mesh(sleeperGeo, sharedMat.sleeper);
+          sleeper.position.set(lx, 0.04, sz);
+          sleeper.receiveShadow = true;
+          seg.add(sleeper);
+        }
+      });
+
+      // Stylized city buildings, trees, and street lamps on both sides
+      [-1, 1].forEach(side => {
+        // 2 buildings per side per segment
+        for (let i = 0; i < 2; i++) {
+          const bw = 5.2 + Math.random() * 3.2;
+          const bh = 9 + Math.random() * 14;
+          const bd = 8.5 + Math.random() * 2.5;
+          const mat = sharedMat.buildings[Math.floor(Math.random() * sharedMat.buildings.length)];
+          const bMesh = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), mat);
+          bMesh.position.set(
+            side * (11.5 + bw * 0.45 + Math.random() * 1.5),
+            bh / 2,
+            -SEGMENT_LEN / 4 + i * (SEGMENT_LEN / 2)
+          );
+          bMesh.castShadow = true;
+          bMesh.receiveShadow = true;
+          seg.add(bMesh);
+
+          // Colorful roof cap
+          const roof = new THREE.Mesh(
+            new THREE.BoxGeometry(bw + 0.4, 0.6, bd + 0.4),
+            new THREE.MeshLambertMaterial({ color: 0xf8fafc })
+          );
+          roof.position.set(bMesh.position.x, bh + 0.3, bMesh.position.z);
+          seg.add(roof);
+        }
+
+        // Stylized cartoon tree on sidewalk
+        const tree = new THREE.Group();
+        const trunk = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.22, 0.3, 1.8, 7),
+          new THREE.MeshLambertMaterial({ color: 0x92400e })
+        );
+        trunk.position.y = 0.9;
+        tree.add(trunk);
+
+        const foliage = new THREE.Mesh(
+          new THREE.DodecahedronGeometry(1.25, 0),
+          new THREE.MeshLambertMaterial({ color: Math.random() > 0.5 ? 0x22c55e : 0x10b981 })
+        );
+        foliage.position.y = 2.4;
+        foliage.castShadow = true;
+        tree.add(foliage);
+
+        tree.position.set(side * 7.8, 0.25, -5);
+        seg.add(tree);
+
+        // Modern street lamp
+        const lamp = new THREE.Group();
+        const pole = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.09, 0.12, 4.6, 6),
+          sharedMat.darkMetal
+        );
+        pole.position.y = 2.3;
+        lamp.add(pole);
+        const arm = new THREE.Mesh(
+          new THREE.BoxGeometry(1.1, 0.12, 0.12),
+          sharedMat.darkMetal
+        );
+        arm.position.set(-side * 0.5, 4.5, 0);
+        lamp.add(arm);
+        const bulb = new THREE.Mesh(
+          new THREE.SphereGeometry(0.24, 8, 8),
+          new THREE.MeshBasicMaterial({ color: 0xfef08a })
+        );
+        bulb.position.set(-side * 0.95, 4.35, 0);
+        lamp.add(bulb);
+
+        lamp.position.set(side * 6.4, 0.25, 6);
+        seg.add(lamp);
+      });
+
+      return seg;
+    }
+
+    function buildEnvironment() {
+      trackSegments = [];
+      for (let i = 0; i < NUM_SEGMENTS; i++) {
+        const zPos = 18 - i * SEGMENT_LEN;
+        const seg = buildTrackSegment(zPos);
+        scene.add(seg);
+        trackSegments.push(seg);
+      }
+    }
+
+    function buildClouds() {
+      const cloudMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+      for (let i = 0; i < 12; i++) {
+        const c = new THREE.Group();
+        for (let p = 0; p < 3; p++) {
+          const puff = new THREE.Mesh(new THREE.SphereGeometry(1.6 + Math.random() * 1.1, 10, 10), cloudMat);
+          puff.position.set((p - 1) * 1.6, Math.random() * 0.6, Math.random() * 0.5);
+          c.add(puff);
+        }
+        c.position.set(
+          (Math.random() - 0.5) * 90,
+          20 + Math.random() * 12,
+          -20 - Math.random() * 130
+        );
+        scene.add(c);
+        clouds.push(c);
+      }
+    }
+
+    /* ==================== 9. ORIGINAL CARTOON 3D RUNNER CHARACTER ==================== */
+    function buildPlayer(charId) {
+      if (playerGroup) {
+        scene.remove(playerGroup);
+      }
+
+      const preset = CHARACTERS.find(c => c.id === charId) || CHARACTERS[0];
+      playerGroup = new THREE.Group();
+
+      const bodyPivot = new THREE.Group();
+      playerGroup.add(bodyPivot);
+
+      const torsoMat = new THREE.MeshLambertMaterial({ color: preset.torso });
+      const accentMat = new THREE.MeshLambertMaterial({ color: preset.accent });
+      const pantsMat = new THREE.MeshLambertMaterial({ color: preset.pants });
+      const shoeMat = new THREE.MeshLambertMaterial({ color: preset.shoes });
+      const skinMat = new THREE.MeshLambertMaterial({ color: preset.skin });
+      const gearMat = new THREE.MeshLambertMaterial({ color: preset.headgearColor });
+      const eyeMat = new THREE.MeshBasicMaterial({ color: 0x0f172a });
+
+      // Torso
+      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.86, 1.0, 0.52), torsoMat);
+      torso.position.y = 1.48;
+      torso.castShadow = true;
+      bodyPivot.add(torso);
+
+      // Center accent stripe / lab coat lapel / capsule belt
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.96, 0.55), accentMat);
+      stripe.position.y = 1.48;
+      bodyPivot.add(stripe);
+
+      // Backpack (sporty cartoon pack)
+      const pack = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.64, 0.28), accentMat);
+      pack.position.set(0, 1.54, 0.34);
+      pack.castShadow = true;
+      bodyPivot.add(pack);
+
+      // Head Group
+      const headGroup = new THREE.Group();
+      headGroup.position.set(0, 2.34, 0);
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.68, 0.68), skinMat);
+      head.castShadow = true;
+      headGroup.add(head);
+
+      // Hair back/top base
+      const hair = new THREE.Mesh(
+        new THREE.BoxGeometry(0.72, 0.28, 0.72),
+        new THREE.MeshLambertMaterial({ color: 0x1e293b })
+      );
+      hair.position.set(0, 0.26, 0.04);
+      headGroup.add(hair);
+
+      // Unique headgear per character
+      if (preset.headgearType === "cap") {
+        const capTop = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.22, 0.74), gearMat);
+        capTop.position.set(0, 0.36, 0);
+        headGroup.add(capTop);
+        const brim = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.08, 0.36), gearMat);
+        brim.position.set(0, 0.28, -0.45);
+        headGroup.add(brim);
+      } else if (preset.headgearType === "visor") {
+        const band = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.14, 0.74), gearMat);
+        band.position.set(0, 0.24, 0);
+        headGroup.add(band);
+        const visor = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.08, 0.34), gearMat);
+        visor.position.set(0, 0.22, -0.42);
+        headGroup.add(visor);
+      } else if (preset.headgearType === "headband") {
+        const hband = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.16, 0.74), gearMat);
+        hband.position.set(0, 0.2, 0);
+        headGroup.add(hband);
+        // Fluttering tail at back
+        const tail = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.36, 0.12), gearMat);
+        tail.position.set(0.15, 0.12, 0.42);
+        tail.rotation.x = 0.5;
+        headGroup.add(tail);
+      } else if (preset.headgearType === "goggles") {
+        const strap = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.14, 0.74), sharedMat.darkMetal);
+        strap.position.set(0, 0.12, 0);
+        headGroup.add(strap);
+        const lens = new THREE.Mesh(
+          new THREE.BoxGeometry(0.64, 0.22, 0.16),
+          new THREE.MeshBasicMaterial({ color: 0x22d3ee })
+        );
+        lens.position.set(0, 0.12, -0.34);
+        headGroup.add(lens);
+      }
+
+      // Eyes (facing forward -Z)
+      [-0.16, 0.16].forEach(ex => {
+        const eye = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.11, 0.04), eyeMat);
+        eye.position.set(ex, 0.02, -0.35);
+        headGroup.add(eye);
+      });
+      bodyPivot.add(headGroup);
+
+      // Arms (with shoulder pivots)
+      function makeArm(side) {
+        const pivot = new THREE.Group();
+        pivot.position.set(side * 0.58, 1.88, 0);
+        const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.62, 0.26), torsoMat);
+        sleeve.position.y = -0.28;
+        sleeve.castShadow = true;
+        pivot.add(sleeve);
+        const hand = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.22), skinMat);
+        hand.position.y = -0.66;
+        pivot.add(hand);
+        return pivot;
+      }
+
+      const leftArm = makeArm(-1);
+      const rightArm = makeArm(1);
+      bodyPivot.add(leftArm, rightArm);
+
+      // Legs (with hip pivots)
+      function makeLeg(side) {
+        const pivot = new THREE.Group();
+        pivot.position.set(side * 0.24, 0.96, 0);
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.72, 0.34), pantsMat);
+        leg.position.y = -0.36;
+        leg.castShadow = true;
+        pivot.add(leg);
+        const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.24, 0.52), shoeMat);
+        shoe.position.set(0, -0.82, -0.08);
+        shoe.castShadow = true;
+        pivot.add(shoe);
+        return pivot;
+      }
+
+      const leftLeg = makeLeg(-1);
+      const rightLeg = makeLeg(1);
+      bodyPivot.add(leftLeg, rightLeg);
+
+      // Shield Aura Sphere
+      shieldMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(1.58, 20, 16),
+        new THREE.MeshBasicMaterial({
+          color: 0x38bdf8,
+          transparent: true,
+          opacity: 0.28,
+          wireframe: false
+        })
+      );
+      shieldMesh.position.y = 1.35;
+      shieldMesh.visible = false;
+      playerGroup.add(shieldMesh);
+
+      // Magnet Aura Ring
+      magnetRingMesh = new THREE.Mesh(
+        new THREE.TorusGeometry(1.25, 0.08, 8, 24),
+        new THREE.MeshBasicMaterial({ color: 0xf472b6, transparent: true, opacity: 0.85 })
+      );
+      magnetRingMesh.rotation.x = Math.PI / 2;
+      magnetRingMesh.position.y = 1.25;
+      magnetRingMesh.visible = false;
+      playerGroup.add(magnetRingMesh);
+
+      playerRig = { bodyPivot, headGroup, leftArm, rightArm, leftLeg, rightLeg };
+      playerGroup.position.set(0, 0, 0);
+      scene.add(playerGroup);
+    }
+
+    /* ==================== 10. OBSTACLES, COINS & POWER-UPS ==================== */
+    function createTrainMesh() {
+      const group = new THREE.Group();
+      const trainColors = [0xef4444, 0x2563eb, 0x10b981, 0xf59e0b, 0x8b5cf6];
+      const mainColor = trainColors[Math.floor(Math.random() * trainColors.length)];
+      const bodyMat = new THREE.MeshLambertMaterial({ color: mainColor });
+      const stripeMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+      const glassMat = new THREE.MeshLambertMaterial({ color: 0xbae6fd });
+
+      const len = 10.5;
+      // Main train carriage
+      const body = new THREE.Mesh(new THREE.BoxGeometry(2.25, 2.75, len), bodyMat);
+      body.position.y = 1.65;
+      body.castShadow = true;
+      body.receiveShadow = true;
+      group.add(body);
+
+      // White accent band
+      const band = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.35, len + 0.04), stripeMat);
+      band.position.y = 1.2;
+      group.add(band);
+
+      // Roof AC units
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.32, len - 1.2), sharedMat.darkMetal);
+      roof.position.y = 3.12;
+      group.add(roof);
+
+      // Front windshield (facing +Z towards player)
+      const windshield = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.9, 0.14), glassMat);
+      windshield.position.set(0, 2.15, len / 2 + 0.02);
+      group.add(windshield);
+
+      // Front bright headlights
+      const lightMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+      [-0.72, 0.72].forEach(lx => {
+        const hl = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.12, 10), lightMat);
+        hl.rotation.x = Math.PI / 2;
+        hl.position.set(lx, 0.85, len / 2 + 0.04);
+        group.add(hl);
+      });
+
+      // Bumper
+      const bumper = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.35, 0.4), sharedMat.darkMetal);
+      bumper.position.set(0, 0.35, len / 2 + 0.12);
+      group.add(bumper);
+
+      return { group, halfLen: len / 2 };
+    }
+
+    function createLowBarrierMesh() {
+      const group = new THREE.Group();
+      const board = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.72, 0.32), sharedMat.hazard);
+      board.position.y = 0.72;
+      board.castShadow = true;
+      group.add(board);
+
+      [-0.95, 0.95].forEach(px => {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.05, 0.36), sharedMat.darkMetal);
+        leg.position.set(px, 0.52, 0);
+        leg.castShadow = true;
+        group.add(leg);
+      });
+      return group;
+    }
+
+    function createHighBarrierMesh() {
+      const group = new THREE.Group();
+      // Two tall side posts
+      [-1.12, 1.12].forEach(px => {
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.22, 3.3, 0.26), sharedMat.darkMetal);
+        post.position.set(px, 1.65, 0);
+        post.castShadow = true;
+        group.add(post);
+      });
+      // Overhead sign beam with clear space underneath for sliding (bottom at y = 1.48)
+      const sign = new THREE.Mesh(new THREE.BoxGeometry(2.45, 1.15, 0.34), sharedMat.overheadSign);
+      sign.position.y = 2.08;
+      sign.castShadow = true;
+      group.add(sign);
+
+      return group;
+    }
+
+    function spawnObstacleWave() {
+      // Do not spawn obstacles when a quiz gate is approaching or near spawn Z
+      if (state.activeQuiz && state.activeQuiz.z < -12) return;
+      if (state.quizTimer < 2.2) return;
+
+      const spawnZ = -115;
+      // Pick 1 or 2 lanes to populate, ALWAYS leaving at least 1 lane completely passable
+      const laneOrder = [0, 1, 2].sort(() => Math.random() - 0.5);
+      const count = Math.random() < 0.52 ? 2 : 1;
+
+      for (let i = 0; i < count; i++) {
+        const lane = laneOrder[i];
+        const r = Math.random();
+        let type = "low";
+        if (r < 0.38) type = "train";
+        else if (r < 0.70) type = "low";
+        else type = "high";
+
+        // Avoid spawning two trains side-by-side too often on Easy
+        if (type === "train" && savedData.selectedDifficulty === "easy" && i > 0) {
+          type = "low";
+        }
+
+        if (type === "train") {
+          const { group, halfLen } = createTrainMesh();
+          group.position.set(LANE_X[lane], 0, spawnZ - Math.random() * 6);
+          scene.add(group);
+          obstacles.push({
+            type: "train",
+            lane,
+            mesh: group,
+            halfLen,
+            extraSpeed: 10 + state.level * 0.8,
+            hit: false
+          });
+        } else if (type === "low") {
+          const mesh = createLowBarrierMesh();
+          mesh.position.set(LANE_X[lane], 0, spawnZ);
+          scene.add(mesh);
+          obstacles.push({
+            type: "low",
+            lane,
+            mesh,
+            halfLen: 0.55,
+            extraSpeed: 0,
+            hit: false
+          });
+          // Optionally place an arc of coins above low barrier to reward jumping!
+          if (Math.random() < 0.65) {
+            spawnCoinArc(lane, spawnZ);
+          }
+        } else {
+          const mesh = createHighBarrierMesh();
+          mesh.position.set(LANE_X[lane], 0, spawnZ);
+          scene.add(mesh);
+          obstacles.push({
+            type: "high",
+            lane,
+            mesh,
+            halfLen: 0.55,
+            extraSpeed: 0,
+            hit: false
+          });
+        }
+      }
+    }
+
+    function spawnCoinLine() {
+      const lane = Math.floor(Math.random() * 3);
+      const startZ = -95;
+      const count = 4 + Math.floor(Math.random() * 4);
+      for (let i = 0; i < count; i++) {
+        const z = startZ - i * 2.5;
+        // Skip coin if overlapping an existing obstacle in same lane
+        const blocked = obstacles.some(o => o.lane === lane && Math.abs(o.mesh.position.z - z) < o.halfLen + 1.5);
+        if (blocked) continue;
+        addCoin(LANE_X[lane], 1.05, z);
+      }
+    }
+
+    function spawnCoinArc(lane, centerZ) {
+      const offsets = [-3.0, -1.5, 0, 1.5, 3.0];
+      const heights = [1.3, 2.2, 2.75, 2.2, 1.3];
+      offsets.forEach((dz, idx) => {
+        addCoin(LANE_X[lane], heights[idx], centerZ + dz);
+      });
+    }
+
+    function addCoin(x, y, z) {
+      const m = new THREE.Mesh(sharedGeo.coin, sharedMat.coin);
+      m.position.set(x, y, z);
+      scene.add(m);
+      coins.push({ mesh: m, baseY: y, phase: Math.random() * Math.PI * 2 });
+    }
+
+    function spawnPowerUp() {
+      const types = ["magnet", "shield", "mult"];
+      const type = types[Math.floor(Math.random() * types.length)];
+      const lane = Math.floor(Math.random() * 3);
+      const z = -105;
+
+      // Avoid placing right inside a train
+      const blocked = obstacles.some(o => o.lane === lane && Math.abs(o.mesh.position.z - z) < o.halfLen + 2.5);
+      if (blocked) return;
+
+      const group = new THREE.Group();
+      let glowColor = 0xec4899;
+
+      if (type === "magnet") {
+        glowColor = 0xec4899;
+        // Stylized U-Magnet
+        const arch = new THREE.Mesh(
+          new THREE.TorusGeometry(0.45, 0.14, 10, 16, Math.PI),
+          new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0x991b1b, emissiveIntensity: 0.35 })
+        );
+        arch.rotation.z = Math.PI;
+        arch.position.y = 0.2;
+        group.add(arch);
+        [-0.45, 0.45].forEach(tx => {
+          const tip = new THREE.Mesh(
+            new THREE.BoxGeometry(0.26, 0.28, 0.26),
+            new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.8, roughness: 0.2 })
+          );
+          tip.position.set(tx, 0.35, 0);
+          group.add(tip);
+        });
+      } else if (type === "shield") {
+        glowColor = 0x38bdf8;
+        const crystal = new THREE.Mesh(
+          new THREE.OctahedronGeometry(0.55, 0),
+          new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.45 })
+        );
+        group.add(crystal);
+      } else {
+        glowColor = 0xa855f7;
+        const star = new THREE.Mesh(
+          new THREE.DodecahedronGeometry(0.52, 0),
+          new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xa855f7, emissiveIntensity: 0.45 })
+        );
+        group.add(star);
+      }
+
+      // Outer glowing ring
+      const halo = new THREE.Mesh(
+        new THREE.TorusGeometry(0.78, 0.06, 8, 24),
+        new THREE.MeshBasicMaterial({ color: glowColor })
+      );
+      group.add(halo);
+
+      group.position.set(LANE_X[lane], 1.45, z);
+      scene.add(group);
+      powerUps.push({ type, mesh: group, baseY: 1.45, phase: Math.random() * Math.PI * 2 });
+    }
+
+    /* ==================== 11. 3D QUIZ ANSWER GATES & QUIZ DECK ==================== */
+    function buildQuestionDeck() {
+      const cat = savedData.selectedCategory;
+      const filtered = cat === "ALL"
+        ? QUESTION_BANK.slice()
+        : QUESTION_BANK.filter(item => item.cat === cat);
+
+      // Fisher-Yates shuffle
+      for (let i = filtered.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
+      }
+      state.questionDeck = filtered;
+    }
+
+    function nextQuestionFromDeck() {
+      if (state.questionDeck.length === 0) {
+        buildQuestionDeck();
+      }
+      return state.questionDeck.pop();
+    }
+
+    function createGateBannerTexture(laneLabel, answerText, bgTop, bgBot) {
+      const c = document.createElement("canvas");
+      c.width = 512;
+      c.height = 256;
+      const ctx = c.getContext("2d");
+
+      // Vibrant gradient panel
+      const grad = ctx.createLinearGradient(0, 0, 0, 256);
+      grad.addColorStop(0, bgTop);
+      grad.addColorStop(1, bgBot);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 512, 256);
+
+      // Crisp white rounded frame
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 12;
+      ctx.strokeRect(10, 10, 492, 236);
+
+      // Top lane pill
+      ctx.fillStyle = "rgba(15,23,42,0.42)";
+      ctx.fillRect(140, 22, 232, 42);
+      ctx.fillStyle = "#fef08a";
+      ctx.font = "bold 28px Fredoka, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(laneLabel, 256, 44);
+
+      // Word-wrapped answer text
+      ctx.fillStyle = "#ffffff";
+      const maxWidth = 448;
+      let fontSize = answerText.length > 20 ? 36 : (answerText.length > 14 ? 42 : 48);
+      ctx.font = `bold ${fontSize}px Nunito, sans-serif`;
+
+      const words = answerText.split(" ");
+      const lines = [];
+      let current = "";
+      for (let w of words) {
+        const test = current ? current + " " + w : w;
+        if (ctx.measureText(test).width > maxWidth && current) {
+          lines.push(current);
+          current = w;
+        } else {
+          current = test;
+        }
+      }
+      if (current) lines.push(current);
+
+      const lineH = fontSize * 1.18;
+      const startY = 154 - ((lines.length - 1) * lineH) / 2;
+      lines.forEach((line, idx) => {
+        ctx.fillText(line, 256, startY + idx * lineH);
+      });
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.needsUpdate = true;
+      return tex;
+    }
+
+    function triggerQuizGate() {
+      if (state.activeQuiz) return;
+
+      const qObj = nextQuestionFromDeck();
+      const correctStr = qObj.a[0];
+
+      // Shuffle the 3 options into Left (0), Middle (1), Right (2)
+      const shuffled = qObj.a.slice();
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      const correctLane = shuffled.indexOf(correctStr);
+
+      // Calculate safe spawn distance so player gets generous reading time based on difficulty
+      const diff = DIFFICULTY_CFG[savedData.selectedDifficulty];
+      const gateDist = Math.max(82, Math.min(132, state.speed * diff.quizReadSec));
+      const spawnZ = -gateDist;
+
+      // Clear normal obstacles in the quiz zone so the player can safely switch lanes & answer
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const oz = obstacles[i].mesh.position.z;
+        if (oz < -18 && oz > spawnZ - 26) {
+          scene.remove(obstacles[i].mesh);
+          obstacles.splice(i, 1);
+        }
+      }
+
+      // Build 3D Portal Gates across all 3 lanes
+      const gateGroup = new THREE.Group();
+      gateGroup.position.z = spawnZ;
+
+      const laneStyles = [
+        { label: "⬅️ KIRI",   top: "#3b82f6", bot: "#1d4ed8", pillar: 0x3b82f6, portal: 0x60a5fa },
+        { label: "⬆️ TENGAH", top: "#f59e0b", bot: "#d97706", pillar: 0xf59e0b, portal: 0xfbbf24 },
+        { label: "➡️ KANAN",  top: "#8b5cf6", bot: "#6d28d9", pillar: 0x8b5cf6, portal: 0xa78bfa }
+      ];
+
+      const textures = [];
+
+      LANE_X.forEach((lx, idx) => {
+        const st = laneStyles[idx];
+        const pillarMat = new THREE.MeshLambertMaterial({ color: st.pillar });
+
+        // Left & right gate pillars
+        [-1.18, 1.18].forEach(px => {
+          const p = new THREE.Mesh(new THREE.BoxGeometry(0.24, 4.4, 0.35), pillarMat);
+          p.position.set(lx + px, 2.2, 0);
+          p.castShadow = true;
+          gateGroup.add(p);
+        });
+
+        // Translucent glowing energy curtain
+        const curtain = new THREE.Mesh(
+          new THREE.PlaneGeometry(2.15, 2.8),
+          new THREE.MeshBasicMaterial({
+            color: st.portal,
+            transparent: true,
+            opacity: 0.26,
+            side: THREE.DoubleSide
+          })
+        );
+        curtain.position.set(lx, 1.4, 0);
+        gateGroup.add(curtain);
+
+        // Crisp 3D Answer Banner above gate
+        const tex = createGateBannerTexture(st.label, shuffled[idx], st.top, st.bot);
+        textures.push(tex);
+        const banner = new THREE.Mesh(
+          new THREE.BoxGeometry(2.6, 1.38, 0.24),
+          new THREE.MeshBasicMaterial({ map: tex })
+        );
+        banner.position.set(lx, 3.65, 0.08);
+        gateGroup.add(banner);
+      });
+
+      scene.add(gateGroup);
+
+      state.activeQuiz = {
+        group: gateGroup,
+        z: spawnZ,
+        startZ: spawnZ,
+        questionObj: qObj,
+        laneAnswers: shuffled,
+        correctLane,
+        correctText: correctStr,
+        textures,
+        resolved: false
+      };
+
+      // Update Top Quiz HUD
+      document.getElementById("quiz-cat-label").textContent = CATEGORY_NAMES[qObj.cat] || qObj.cat;
+      document.getElementById("quiz-question-text").textContent = qObj.q;
+      for (let i = 0; i < 3; i++) {
+        document.getElementById(`lane-opt-text-${i}`).textContent = shuffled[i];
+      }
+      updateQuizLaneHighlight();
+      document.getElementById("quiz-hud").classList.add("active");
+    }
+
+    function updateQuizLaneHighlight() {
+      for (let i = 0; i < 3; i++) {
+        const el = document.getElementById(`lane-opt-${i}`);
+        if (i === state.laneIndex) el.classList.add("selected-lane");
+        else el.classList.remove("selected-lane");
+      }
+    }
+
+    function resolveActiveQuiz() {
+      const q = state.activeQuiz;
+      if (!q || q.resolved) return;
+      q.resolved = true;
+      state.quizAnswered++;
+
+      const chosenLane = state.laneIndex;
+      const chosenText = q.laneAnswers[chosenLane];
+      const isCorrect = chosenLane === q.correctLane;
+
+      if (isCorrect) {
+        state.quizCorrect++;
+        state.streak++;
+        const diffMult = DIFFICULTY_CFG[savedData.selectedDifficulty].scoreMult;
+        const puMult = state.multTimer > 0 ? 2 : 1;
+        const pts = Math.round(150 * diffMult * puMult);
+        state.score += pts;
+        state.coins += 15;
+
+        sfx.playCorrect();
+        spawnParticles(playerGroup.position.x, 1.8, 0, 0x10b981, 22);
+        flashScreen("rgba(16, 185, 129, 0.32)");
+        showToast(`✅ BENAR! +${pts} Skor & +15 Koin`, "toast-success", 1700);
+      } else {
+        state.streak = 0;
+        // Record missed question for Game Over study review
+        state.missedQuestions.push({
+          cat: q.questionObj.cat,
+          q: q.questionObj.q,
+          chosen: chosenText,
+          correct: q.correctText
+        });
+
+        if (state.shieldActive) {
+          state.shieldActive = false;
+          shieldMesh.visible = false;
+          sfx.playShieldBlock();
+          spawnParticles(playerGroup.position.x, 1.5, 0, 0x38bdf8, 22);
+          flashScreen("rgba(56, 189, 248, 0.35)");
+          showToast(`🛡️ Tameng Aktif! Jawaban: ${q.correctText}`, "toast-info", 2400);
+        } else {
+          state.lives--;
+          state.invulnTimer = 1.3;
+          triggerShake(0.32, 0.35);
+          sfx.playWrong();
+          spawnParticles(playerGroup.position.x, 1.5, 0, 0xf43f5e, 22);
+          flashScreen("rgba(244, 63, 94, 0.38)");
+          showToast(`❌ Salah! Jawaban: ${q.correctText}`, "toast-error", 2500);
+
+          if (state.lives <= 0) {
+            triggerGameOver("Nyawa habis setelah menjawab kuis!");
+          }
+        }
+      }
+
+      document.getElementById("quiz-hud").classList.remove("active");
+      updateHUD();
+    }
+
+    function disposeActiveQuiz() {
+      if (!state.activeQuiz) return;
+      scene.remove(state.activeQuiz.group);
+      state.activeQuiz.textures.forEach(t => t.dispose());
+      state.activeQuiz = null;
+      // Schedule next quiz
+      const baseInt = DIFFICULTY_CFG[savedData.selectedDifficulty].quizInterval;
+      state.quizTimer = baseInt + Math.random() * 2.0;
+    }
+
+    /* ==================== 12. PARTICLE SYSTEM ==================== */
+    function spawnParticles(x, y, z, colorHex, count = 12) {
+      const mat = new THREE.MeshBasicMaterial({ color: colorHex });
+      for (let i = 0; i < count; i++) {
+        const m = new THREE.Mesh(sharedGeo.particle, mat);
+        m.position.set(x, y, z);
+        scene.add(m);
+        particles.push({
+          mesh: m,
+          vx: (Math.random() - 0.5) * 9,
+          vy: 2.5 + Math.random() * 6,
+          vz: (Math.random() - 0.5) * 9,
+          life: 0.45 + Math.random() * 0.35
+        });
+      }
+    }
+
+    /* ==================== 13. PLAYER ACTIONS & INPUT ==================== */
+    function moveLane(dir) {
+      if (state.mode !== "playing") return;
+      const next = Math.max(0, Math.min(2, state.laneIndex + dir));
+      if (next !== state.laneIndex) {
+        state.laneIndex = next;
+        sfx.playLane();
+        if (state.activeQuiz) updateQuizLaneHighlight();
+      }
+    }
+
+    function jump() {
+      if (state.mode !== "playing") return;
+      if (!state.isJumping) {
+        state.isJumping = true;
+        state.velY = 14.2;
+        if (state.isSliding) {
+          state.isSliding = false;
+          state.slideTimer = 0;
+        }
+        sfx.playJump();
+      }
+    }
+
+    function slide() {
+      if (state.mode !== "playing") return;
+      if (state.isJumping) {
+        // Fast-fall slam into slide!
+        state.velY = -24;
+      }
+      if (!state.isSliding) {
+        state.isSliding = true;
+        state.slideTimer = 0.72;
+        sfx.playSlide();
+      } else {
+        state.slideTimer = Math.max(state.slideTimer, 0.45);
+      }
+    }
+
+    function setupInputs() {
+      // Desktop Keyboard Controls
+      window.addEventListener("keydown", e => {
+        if (state.mode === "playing") {
+          if (e.code === "ArrowLeft" || e.code === "KeyA") { e.preventDefault(); moveLane(-1); }
+          else if (e.code === "ArrowRight" || e.code === "KeyD") { e.preventDefault(); moveLane(1); }
+          else if (e.code === "ArrowUp" || e.code === "KeyW" || e.code === "Space") { e.preventDefault(); jump(); }
+          else if (e.code === "ArrowDown" || e.code === "KeyS") { e.preventDefault(); slide(); }
+          else if (e.code === "Escape" || e.code === "KeyP") { e.preventDefault(); pauseGame(); }
+        } else if (state.mode === "paused") {
+          if (e.code === "Escape" || e.code === "KeyP") { e.preventDefault(); resumeGame(); }
+        }
+      });
+
+      // Mobile Touch Swipe Controls
+      const container = document.getElementById("game-container");
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let touchHandled = false;
+
+      container.addEventListener("touchstart", e => {
+        if (state.mode !== "playing") return;
+        const t = e.touches[0];
+        touchStartX = t.clientX;
+        touchStartY = t.clientY;
+        touchHandled = false;
+      }, { passive: true });
+
+      container.addEventListener("touchmove", e => {
+        if (state.mode !== "playing" || touchHandled) return;
+        const t = e.touches[0];
+        const dx = t.clientX - touchStartX;
+        const dy = t.clientY - touchStartY;
+        const threshold = 28;
+
+        if (Math.abs(dx) > threshold || Math.abs(dy) > threshold) {
+          touchHandled = true;
+          if (Math.abs(dx) > Math.abs(dy)) {
+            moveLane(dx > 0 ? 1 : -1);
+          } else {
+            if (dy < 0) jump();
+            else slide();
+          }
+        }
+      }, { passive: true });
+
+      container.addEventListener("touchend", () => {
+        touchHandled = false;
+      }, { passive: true });
+
+      // Subtle Desktop Mouse Drag Camera Orbit
+      container.addEventListener("mousedown", e => {
+        state.isDraggingCam = true;
+        state.dragLastX = e.clientX;
+        state.dragLastY = e.clientY;
+      });
+      window.addEventListener("mousemove", e => {
+        if (!state.isDraggingCam) return;
+        const dx = e.clientX - state.dragLastX;
+        const dy = e.clientY - state.dragLastY;
+        state.dragLastX = e.clientX;
+        state.dragLastY = e.clientY;
+        state.camOrbitX = Math.max(-3.5, Math.min(3.5, state.camOrbitX + dx * 0.015));
+        state.camOrbitY = Math.max(-1.2, Math.min(2.4, state.camOrbitY + dy * 0.012));
+      });
+      window.addEventListener("mouseup", () => {
+        state.isDraggingCam = false;
+      });
+
+      // On-Screen Directional D-Pad Buttons
+      const bindPad = (id, fn) => {
+        const el = document.getElementById(id);
+        el.addEventListener("pointerdown", e => {
+          e.preventDefault();
+          e.stopPropagation();
+          fn();
+        });
+      };
+      bindPad("btn-pad-left", () => moveLane(-1));
+      bindPad("btn-pad-right", () => moveLane(1));
+      bindPad("btn-pad-jump", jump);
+      bindPad("btn-pad-slide", slide);
+    }
+
+    /* ==================== 14. COLLISION & DAMAGE HANDLING ==================== */
+    function handleObstacleHit(obs) {
+      obs.hit = true;
+      if (state.invulnTimer > 0) return;
+
+      if (state.shieldActive) {
+        state.shieldActive = false;
+        shieldMesh.visible = false;
+        state.invulnTimer = 1.0;
+        sfx.playShieldBlock();
+        spawnParticles(playerGroup.position.x, 1.4, 0, 0x38bdf8, 24);
+        flashScreen("rgba(56, 189, 248, 0.35)");
+        showToast("🛡️ Tameng Menahan Benturan!", "toast-info", 1500);
+        updateHUD();
+        return;
+      }
+
+      state.lives--;
+      state.streak = 0;
+      state.invulnTimer = 1.45;
+      triggerShake(0.35, 0.42);
+      sfx.playCrash();
+      spawnParticles(playerGroup.position.x, 1.2, 0, 0xf97316, 20);
+      flashScreen("rgba(239, 68, 68, 0.42)");
+      showToast("💥 Aduh! -1 Nyawa", "toast-error", 1200);
+      updateHUD();
+
+      if (state.lives <= 0) {
+        triggerGameOver("Kamu menabrak rintangan!");
+      }
+    }
+
+    /* ==================== 15. MAIN GAME UPDATE LOOP ==================== */
+    function updateGame(dt) {
+      // Smoothly return manual camera orbit when not dragging
+      if (!state.isDraggingCam) {
+        state.camOrbitX += (0 - state.camOrbitX) * Math.min(1, dt * 3.5);
+        state.camOrbitY += (0 - state.camOrbitY) * Math.min(1, dt * 3.5);
+      }
+
+      // Gently animate world & idle character even on Menu
+      if (state.mode !== "playing") {
+        if (state.mode === "menu") {
+          const idleSpeed = 8;
+          scrollEnvironment(idleSpeed * dt);
+          animateCharacter(dt, idleSpeed);
+          camera.position.set(
+            Math.sin(clock.elapsedTime * 0.4) * 1.4 + state.camOrbitX,
+            4.8 + state.camOrbitY,
+            8.4
+          );
+          camera.lookAt(0, 1.8, -12);
+        }
+        return;
+      }
+
+      const diff = DIFFICULTY_CFG[savedData.selectedDifficulty];
+
+      // Progressive speed & distance
+      state.speed = Math.min(diff.maxSpeed, state.speed + diff.accel * dt);
+      const stepZ = state.speed * dt;
+      state.distance += stepZ * 0.42;
+
+      // Score from distance
+      const mult = (state.multTimer > 0 ? 2 : 1) * diff.scoreMult;
+      state.score += stepZ * 0.55 * mult;
+
+      // Automatic Level Up every 180 meters
+      const newLevel = Math.floor(state.distance / 180) + 1;
+      if (newLevel > state.level) {
+        state.level = newLevel;
+        sfx.playLevelUp();
+        showToast(`🚀 LEVEL ${state.level}! Kecepatan Meningkat!`, "toast-gold", 1600);
+      }
+
+      // Power-Up timers
+      if (state.magnetTimer > 0) {
+        state.magnetTimer = Math.max(0, state.magnetTimer - dt);
+        magnetRingMesh.visible = true;
+        magnetRingMesh.rotation.z += dt * 5;
+      } else {
+        magnetRingMesh.visible = false;
+      }
+
+      if (state.multTimer > 0) {
+        state.multTimer = Math.max(0, state.multTimer - dt);
+      }
+
+      if (state.shieldActive) {
+        shieldMesh.visible = true;
+        const pulse = 1 + Math.sin(clock.elapsedTime * 7) * 0.05;
+        shieldMesh.scale.set(pulse, pulse, pulse);
+      } else {
+        shieldMesh.visible = false;
+      }
+
+      // Invulnerability blink
+      if (state.invulnTimer > 0) {
+        state.invulnTimer = Math.max(0, state.invulnTimer - dt);
+        playerRig.bodyPivot.visible = Math.floor(state.invulnTimer * 16) % 2 === 0;
+      } else {
+        playerRig.bodyPivot.visible = true;
+      }
+
+      // Scroll tracks, city & clouds
+      scrollEnvironment(stepZ);
+
+      // Horizontal smooth lane interpolation + body lean
+      const targetX = LANE_X[state.laneIndex];
+      const prevX = state.playerX;
+      state.playerX += (targetX - state.playerX) * Math.min(1, dt * 15);
+      const vx = (state.playerX - prevX) / Math.max(dt, 0.001);
+      playerGroup.position.x = state.playerX;
+
+      // Vertical Jump Physics
+      if (state.isJumping) {
+        state.playerY += state.velY * dt;
+        state.velY -= 38.0 * dt; // snappy cartoon gravity
+        if (state.playerY <= 0) {
+          state.playerY = 0;
+          state.velY = 0;
+          state.isJumping = false;
+        }
+      }
+      playerGroup.position.y = state.playerY;
+
+      // Slide Timer
+      if (state.isSliding) {
+        state.slideTimer -= dt;
+        if (state.slideTimer <= 0) {
+          state.isSliding = false;
+          state.slideTimer = 0;
+        }
+      }
+
+      // Procedural 3D character animation
+      animateCharacter(dt, state.speed, vx);
+
+      // Spawners
+      state.obstacleTimer -= dt;
+      if (state.obstacleTimer <= 0) {
+        spawnObstacleWave();
+        const minGap = Math.max(0.72, 1.55 - (state.speed - 16) * 0.028);
+        state.obstacleTimer = minGap + Math.random() * 0.45;
+      }
+
+      state.coinTimer -= dt;
+      if (state.coinTimer <= 0) {
+        spawnCoinLine();
+        state.coinTimer = 1.3 + Math.random() * 1.1;
+      }
+
+      state.powerUpTimer -= dt;
+      if (state.powerUpTimer <= 0) {
+        spawnPowerUp();
+        state.powerUpTimer = 13 + Math.random() * 7;
+      }
+
+      // Quiz Scheduler
+      if (!state.activeQuiz) {
+        state.quizTimer -= dt;
+        if (state.quizTimer <= 0) {
+          triggerQuizGate();
+        }
+      } else {
+        // Move active 3D Quiz Gates toward player
+        state.activeQuiz.z += stepZ;
+        state.activeQuiz.group.position.z = state.activeQuiz.z;
+
+        // Update top quiz progress bar
+        const progress = Math.max(0, Math.min(1, state.activeQuiz.z / state.activeQuiz.startZ));
+        document.getElementById("quiz-timer-fill").style.width = `${progress * 100}%`;
+
+        // Evaluate once player passes through the gate line (z >= -0.3)
+        if (!state.activeQuiz.resolved && state.activeQuiz.z >= -0.3) {
+          resolveActiveQuiz();
+        }
+        // Dispose once behind camera
+        if (state.activeQuiz && state.activeQuiz.z > 14) {
+          disposeActiveQuiz();
+        }
+      }
+
+      // Update Obstacles & Check Collisions
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const obs = obstacles[i];
+        obs.mesh.position.z += (state.speed + obs.extraSpeed) * dt;
+        const oz = obs.mesh.position.z;
+
+        if (!obs.hit && Math.abs(oz) < obs.halfLen + 0.45) {
+          const dx = Math.abs(playerGroup.position.x - obs.mesh.position.x);
+          if (dx < 1.15) {
+            if (obs.type === "train") {
+              if (state.playerY < 2.95) handleObstacleHit(obs);
+            } else if (obs.type === "low") {
+              if (state.playerY < 1.05) handleObstacleHit(obs);
+            } else if (obs.type === "high") {
+              // Must slide under! If not sliding (or jumped into it), hit!
+              if (!state.isSliding || state.playerY > 0.35) handleObstacleHit(obs);
+            }
+          }
+        }
+
+        if (oz > 18) {
+          scene.remove(obs.mesh);
+          obstacles.splice(i, 1);
+        }
+      }
+
+      // Update Coins & Magnet Attraction
+      for (let i = coins.length - 1; i >= 0; i--) {
+        const c = coins[i];
+        c.mesh.position.z += stepZ;
+        c.mesh.rotation.y += dt * 4.5;
+        c.mesh.position.y = c.baseY + Math.sin(clock.elapsedTime * 5 + c.phase) * 0.14;
+
+        // Coin Magnet pull
+        if (state.magnetTimer > 0 && c.mesh.position.z > -18 && c.mesh.position.z < 3) {
+          c.mesh.position.x += (playerGroup.position.x - c.mesh.position.x) * Math.min(1, dt * 11);
+          c.mesh.position.y += ((playerGroup.position.y + 1.2) - c.mesh.position.y) * Math.min(1, dt * 11);
+          c.mesh.position.z += (0 - c.mesh.position.z) * Math.min(1, dt * 6);
+        }
+
+        const dx = Math.abs(c.mesh.position.x - playerGroup.position.x);
+        const dy = Math.abs(c.mesh.position.y - (playerGroup.position.y + 1.15));
+        const dz = Math.abs(c.mesh.position.z);
+
+        if (dx < 1.05 && dy < 1.35 && dz < 1.1) {
+          state.coins += 1;
+          state.score += Math.round(10 * mult);
+          sfx.playCoin();
+          spawnParticles(c.mesh.position.x, c.mesh.position.y, c.mesh.position.z, 0xfacc15, 6);
+          scene.remove(c.mesh);
+          coins.splice(i, 1);
+          continue;
+        }
+
+        if (c.mesh.position.z > 12) {
+          scene.remove(c.mesh);
+          coins.splice(i, 1);
+        }
+      }
+
+      // Update Power-Ups
+      for (let i = powerUps.length - 1; i >= 0; i--) {
+        const p = powerUps[i];
+        p.mesh.position.z += stepZ;
+        p.mesh.rotation.y += dt * 2.8;
+        p.mesh.position.y = p.baseY + Math.sin(clock.elapsedTime * 4 + p.phase) * 0.22;
+
+        const dx = Math.abs(p.mesh.position.x - playerGroup.position.x);
+        const dz = Math.abs(p.mesh.position.z);
+
+        if (dx < 1.2 && dz < 1.25) {
+          sfx.playPowerUp();
+          if (p.type === "magnet") {
+            state.magnetTimer = 10.0;
+            showToast("🧲 Magnet Koin Aktif! (10 dtk)", "toast-info", 1400);
+            spawnParticles(p.mesh.position.x, 1.5, 0, 0xec4899, 16);
+          } else if (p.type === "shield") {
+            state.shieldActive = true;
+            showToast("🛡️ Tameng Pelindung Aktif!", "toast-info", 1400);
+            spawnParticles(p.mesh.position.x, 1.5, 0, 0x38bdf8, 16);
+          } else if (p.type === "mult") {
+            state.multTimer = 12.0;
+            showToast("⭐ Skor 2X Aktif! (12 dtk)", "toast-gold", 1400);
+            spawnParticles(p.mesh.position.x, 1.5, 0, 0xa855f7, 16);
+          }
+          scene.remove(p.mesh);
+          powerUps.splice(i, 1);
+          continue;
+        }
+
+        if (p.mesh.position.z > 12) {
+          scene.remove(p.mesh);
+          powerUps.splice(i, 1);
+        }
+      }
+
+      // Update Particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const pt = particles[i];
+        pt.life -= dt;
+        pt.mesh.position.x += pt.vx * dt;
+        pt.mesh.position.y += pt.vy * dt;
+        pt.mesh.position.z += pt.vz * dt;
+        pt.vy -= 18 * dt;
+        pt.mesh.rotation.x += dt * 8;
+        pt.mesh.rotation.y += dt * 6;
+        const sc = Math.max(0.01, pt.life * 1.4);
+        pt.mesh.scale.set(sc, sc, sc);
+        if (pt.life <= 0) {
+          scene.remove(pt.mesh);
+          particles.splice(i, 1);
+        }
+      }
+
+      // Smooth Third-Person Camera Follow + Banking + Screen Shake
+      let shakeX = 0, shakeY = 0;
+      if (state.shakeTimer > 0) {
+        state.shakeTimer -= dt;
+        shakeX = (Math.random() - 0.5) * state.shakeIntensity;
+        shakeY = (Math.random() - 0.5) * state.shakeIntensity;
+      }
+
+      const camTargetX = state.playerX * 0.68 + state.camOrbitX + shakeX;
+      const camTargetY = 5.15 + state.playerY * 0.32 + state.camOrbitY + shakeY;
+      camera.position.x += (camTargetX - camera.position.x) * Math.min(1, dt * 8);
+      camera.position.y += (camTargetY - camera.position.y) * Math.min(1, dt * 8);
+      camera.position.z = 8.6;
+      camera.lookAt(state.playerX * 0.45, 2.0 + state.playerY * 0.25, -14);
+      camera.rotation.z += (-vx * 0.0045 - camera.rotation.z) * Math.min(1, dt * 8);
+
+      updateHUD();
+    }
+
+    function scrollEnvironment(stepZ) {
+      const recycleFrontZ = 18 + SEGMENT_LEN;
+      const totalSpan = NUM_SEGMENTS * SEGMENT_LEN;
+      for (let seg of trackSegments) {
+        seg.position.z += stepZ;
+        if (seg.position.z > recycleFrontZ) {
+          seg.position.z -= totalSpan;
+        }
+      }
+      for (let c of clouds) {
+        c.position.z += stepZ * 0.14;
+        if (c.position.z > 22) {
+          c.position.z = -150;
+          c.position.x = (Math.random() - 0.5) * 90;
+        }
+      }
+    }
+
+    function animateCharacter(dt, speed, vx = 0) {
+      const { bodyPivot, leftArm, rightArm, leftLeg, rightLeg } = playerRig;
+      if (!bodyPivot) return;
+
+      if (state.isSliding) {
+        // Flattened low tilted crouch slide
+        bodyPivot.position.y += (-0.52 - bodyPivot.position.y) * Math.min(1, dt * 20);
+        bodyPivot.rotation.x += (-1.05 - bodyPivot.rotation.x) * Math.min(1, dt * 20);
+        bodyPivot.rotation.z += (-vx * 0.02 - bodyPivot.rotation.z) * Math.min(1, dt * 12);
+        leftLeg.rotation.x = 0.8;
+        rightLeg.rotation.x = 0.3;
+        leftArm.rotation.x = -0.8;
+        rightArm.rotation.x = -0.8;
+      } else if (state.isJumping) {
+        // Arms raised up, legs tucked
+        bodyPivot.position.y += (0 - bodyPivot.position.y) * Math.min(1, dt * 16);
+        bodyPivot.rotation.x += (0.14 - bodyPivot.rotation.x) * Math.min(1, dt * 12);
+        bodyPivot.rotation.z += (-vx * 0.028 - bodyPivot.rotation.z) * Math.min(1, dt * 12);
+        leftArm.rotation.x = -2.4;
+        rightArm.rotation.x = -2.4;
+        leftLeg.rotation.x = 0.75;
+        rightLeg.rotation.x = -0.45;
+      } else {
+        // Energetic cartoon running cycle
+        state.runAnimTime += dt * (speed * 0.58);
+        const swing = Math.sin(state.runAnimTime);
+        const bob = Math.abs(Math.cos(state.runAnimTime)) * 0.14;
+
+        bodyPivot.position.y += (bob - bodyPivot.position.y) * Math.min(1, dt * 20);
+        bodyPivot.rotation.x += (0.16 - bodyPivot.rotation.x) * Math.min(1, dt * 14);
+        bodyPivot.rotation.z += (-vx * 0.032 - bodyPivot.rotation.z) * Math.min(1, dt * 12);
+
+        leftLeg.rotation.x = swing * 0.95;
+        rightLeg.rotation.x = -swing * 0.95;
+        leftArm.rotation.x = -swing * 0.88;
+        rightArm.rotation.x = swing * 0.88;
+      }
+    }
+
+    function triggerShake(duration, intensity) {
+      state.shakeTimer = duration;
+      state.shakeIntensity = intensity;
+    }
+
+    /* ==================== 16. UI FEEDBACK & HUD UPDATES ==================== */
+    let toastTimeout = null;
+    function showToast(msg, cls = "toast-info", dur = 1600) {
+      const el = document.getElementById("feedback-toast");
+      el.textContent = msg;
+      el.className = `show ${cls}`;
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        el.classList.remove("show");
+      }, dur);
+    }
+
+    function flashScreen(rgba) {
+      const el = document.getElementById("screen-flash");
+      el.style.background = rgba;
+      el.style.opacity = "1";
+      setTimeout(() => { el.style.opacity = "0"; }, 180);
+    }
+
+    function updateHUD() {
+      document.getElementById("hud-score").textContent = Math.floor(state.score).toLocaleString("id-ID");
+      document.getElementById("hud-coins").textContent = state.coins;
+      document.getElementById("hud-level").textContent = state.level;
+      document.getElementById("hud-quiz-count").textContent = `${state.quizCorrect}/${state.quizAnswered}`;
+
+      // Hearts
+      let heartsHTML = "";
+      for (let i = 0; i < state.maxLives; i++) {
+        heartsHTML += i < state.lives ? "<span>❤️</span>" : `<span class="heart-lost">❤️</span>`;
+      }
+      document.getElementById("hud-hearts").innerHTML = heartsHTML;
+
+      // Streak pill
+      const streakPill = document.getElementById("hud-streak-pill");
+      if (state.streak >= 2) {
+        streakPill.style.display = "inline-flex";
+        document.getElementById("hud-streak").textContent = state.streak;
+      } else {
+        streakPill.style.display = "none";
+      }
+
+      // Active power-ups bar
+      let puHTML = "";
+      if (state.magnetTimer > 0) {
+        puHTML += `<div class="pu-badge pu-magnet">🧲 ${state.magnetTimer.toFixed(1)}s</div>`;
+      }
+      if (state.shieldActive) {
+        puHTML += `<div class="pu-badge pu-shield">🛡️ TAMENG</div>`;
+      }
+      if (state.multTimer > 0) {
+        puHTML += `<div class="pu-badge pu-mult">⭐ 2X (${state.multTimer.toFixed(1)}s)</div>`;
+      }
+      document.getElementById("powerup-bar").innerHTML = puHTML;
+    }
+
+    function syncTouchPadVisibility() {
+      const pad = document.getElementById("touch-controls");
+      if (savedData.dpadEnabled) pad.classList.add("visible");
+      else pad.classList.remove("visible");
+    }
+
+    /* ==================== 17. GAME FLOW CONTROLS ==================== */
+    function clearWorldEntities() {
+      obstacles.forEach(o => scene.remove(o.mesh));
+      obstacles = [];
+      coins.forEach(c => scene.remove(c.mesh));
+      coins = [];
+      powerUps.forEach(p => scene.remove(p.mesh));
+      powerUps = [];
+      particles.forEach(pt => scene.remove(pt.mesh));
+      particles = [];
+      disposeActiveQuiz();
+      document.getElementById("quiz-hud").classList.remove("active");
+    }
+
+    function startGame() {
+      sfx.init();
+      clearWorldEntities();
+      buildPlayer(savedData.selectedChar);
+      buildQuestionDeck();
+
+      const diff = DIFFICULTY_CFG[savedData.selectedDifficulty];
+
+      state.mode = "playing";
+      state.score = 0;
+      state.coins = 0;
+      state.lives = 3;
+      state.level = 1;
+      state.distance = 0;
+      state.speed = diff.baseSpeed;
+      state.streak = 0;
+      state.quizAnswered = 0;
+      state.quizCorrect = 0;
+      state.missedQuestions = [];
+
+      state.laneIndex = 1;
+      state.playerX = 0;
+      state.playerY = 0;
+      state.velY = 0;
+      state.isJumping = false;
+      state.isSliding = false;
+      state.slideTimer = 0;
+      state.invulnTimer = 0;
+      state.magnetTimer = 0;
+      state.shieldActive = false;
+      state.multTimer = 0;
+
+      state.obstacleTimer = 1.4;
+      state.coinTimer = 0.7;
+      state.powerUpTimer = 8.5;
+      state.quizTimer = 6.5; // First question arrives fairly early so player immediately experiences quiz gameplay!
+
+      playerGroup.position.set(0, 0, 0);
+      playerRig.bodyPivot.visible = true;
+
+      document.getElementById("menu-overlay").classList.add("hidden");
+      document.getElementById("pause-overlay").classList.add("hidden");
+      document.getElementById("gameover-overlay").classList.add("hidden");
+      document.getElementById("hud").classList.remove("hidden");
+
+      syncTouchPadVisibility();
+      updateHUD();
+      clock.getDelta(); // reset dt spike
+      showToast("🏃 Lari & Jawab Soal CPOB!", "toast-info", 1400);
+    }
+
+    function pauseGame() {
+      if (state.mode !== "playing") return;
+      state.mode = "paused";
+      document.getElementById("pause-overlay").classList.remove("hidden");
+    }
+
+    function resumeGame() {
+      if (state.mode !== "paused") return;
+      state.mode = "playing";
+      document.getElementById("pause-overlay").classList.add("hidden");
+      clock.getDelta();
+    }
+
+    function returnToMenu() {
+      clearWorldEntities();
+      state.mode = "menu";
+      document.getElementById("hud").classList.add("hidden");
+      document.getElementById("pause-overlay").classList.add("hidden");
+      document.getElementById("gameover-overlay").classList.add("hidden");
+      document.getElementById("menu-overlay").classList.remove("hidden");
+      updateMenuStats();
+    }
+
+    function triggerGameOver(reasonText) {
+      state.mode = "gameover";
+      sfx.playGameOver();
+
+      const finalScore = Math.floor(state.score);
+      const isNewRecord = finalScore > savedData.highScore && finalScore > 0;
+      if (isNewRecord) {
+        savedData.highScore = finalScore;
+      }
+      savedData.totalCoins += state.coins;
+      persistData();
+
+      document.getElementById("hud").classList.add("hidden");
+      document.getElementById("quiz-hud").classList.remove("active");
+      document.getElementById("gameover-overlay").classList.remove("hidden");
+
+      document.getElementById("go-new-record").style.display = isNewRecord ? "inline-block" : "none";
+      document.getElementById("go-reason").textContent = reasonText || "Sesi selesai! Yuk pelajari materi CPOB lagi.";
+      document.getElementById("go-score").textContent = finalScore.toLocaleString("id-ID");
+
+      const acc = state.quizAnswered > 0
+        ? Math.round((state.quizCorrect / state.quizAnswered) * 100)
+        : 0;
+      document.getElementById("go-correct").textContent = `${state.quizCorrect}/${state.quizAnswered} (${acc}%)`;
+      document.getElementById("go-coins").textContent = state.coins;
+      document.getElementById("go-level-dist").textContent = `Lv.${state.level} • ${Math.floor(state.distance)}m`;
+
+      // Populate Review Missed Questions Accordion
+      const accWrap = document.getElementById("review-accordion");
+      const listEl = document.getElementById("review-list");
+      listEl.classList.remove("open");
+      document.getElementById("review-chevron").textContent = "▼";
+
+      if (state.missedQuestions.length > 0) {
+        accWrap.style.display = "block";
+        document.getElementById("review-count").textContent = state.missedQuestions.length;
+        listEl.innerHTML = state.missedQuestions.map((m, i) => `
+          <div class="review-item">
+            <div class="review-item-q">${i + 1}. [${m.cat}] ${m.q}</div>
+            <div class="review-item-wrong">✖ Pilihanmu: ${m.chosen}</div>
+            <div class="review-item-correct">✔ Jawaban Benar: ${m.correct}</div>
+          </div>
+        `).join("");
+      } else {
+        accWrap.style.display = "none";
+      }
+    }
+
+    /* ==================== 18. MENU & SETTINGS UI BINDING ==================== */
+    function updateMenuStats() {
+      document.getElementById("menu-highscore").textContent = savedData.highScore.toLocaleString("id-ID");
+      document.getElementById("menu-total-coins").textContent = savedData.totalCoins.toLocaleString("id-ID");
+    }
+
+    function renderCharacterGrid() {
+      const grid = document.getElementById("char-grid");
+      grid.innerHTML = CHARACTERS.map(ch => `
+        <div class="char-card ${savedData.selectedChar === ch.id ? "active" : ""}" data-char="${ch.id}">
+          ${ch.svg}
+          <div class="char-name">${ch.name}</div>
+        </div>
+      `).join("");
+
+      grid.querySelectorAll(".char-card").forEach(card => {
+        card.addEventListener("click", () => {
+          savedData.selectedChar = card.dataset.char;
+          persistData();
+          renderCharacterGrid();
+          buildPlayer(savedData.selectedChar);
+          sfx.playLane();
+        });
+      });
+    }
+
+    function initUI() {
+      updateMenuStats();
+      renderCharacterGrid();
+
+      // Category Selector
+      const catSelect = document.getElementById("category-select");
+      catSelect.value = savedData.selectedCategory;
+      catSelect.addEventListener("change", () => {
+        savedData.selectedCategory = catSelect.value;
+        persistData();
+      });
+
+      // Difficulty Buttons
+      const diffBtns = document.querySelectorAll(".diff-btn");
+      const syncDiffBtns = () => {
+        diffBtns.forEach(b => {
+          b.classList.toggle("active", b.dataset.diff === savedData.selectedDifficulty);
+        });
+      };
+      syncDiffBtns();
+      diffBtns.forEach(b => {
+        b.addEventListener("click", () => {
+          savedData.selectedDifficulty = b.dataset.diff;
+          persistData();
+          syncDiffBtns();
+          sfx.playLane();
+        });
+      });
+
+      // Main Menu Buttons
+      document.getElementById("btn-play").addEventListener("click", startGame);
+      document.getElementById("btn-settings").addEventListener("click", () => {
+        document.getElementById("reset-confirm-box").style.display = "none";
+        document.getElementById("settings-overlay").classList.remove("hidden");
+      });
+      document.getElementById("btn-close-settings").addEventListener("click", () => {
+        document.getElementById("settings-overlay").classList.add("hidden");
+      });
+
+      // Settings Toggles
+      const toggleSfx = document.getElementById("toggle-sfx");
+      const toggleDpad = document.getElementById("toggle-dpad");
+      toggleSfx.classList.toggle("on", savedData.sfxEnabled);
+      toggleDpad.classList.toggle("on", savedData.dpadEnabled);
+
+      toggleSfx.addEventListener("click", () => {
+        savedData.sfxEnabled = !savedData.sfxEnabled;
+        sfx.enabled = savedData.sfxEnabled;
+        toggleSfx.classList.toggle("on", savedData.sfxEnabled);
+        persistData();
+        if (savedData.sfxEnabled) sfx.playCoin();
+      });
+
+      toggleDpad.addEventListener("click", () => {
+        savedData.dpadEnabled = !savedData.dpadEnabled;
+        toggleDpad.classList.toggle("on", savedData.dpadEnabled);
+        persistData();
+        syncTouchPadVisibility();
+      });
+
+      // Reset High Score (safe in-modal confirmation — never alert/confirm)
+      document.getElementById("btn-reset-hs").addEventListener("click", () => {
+        document.getElementById("reset-confirm-box").style.display = "block";
+      });
+      document.getElementById("btn-reset-no").addEventListener("click", () => {
+        document.getElementById("reset-confirm-box").style.display = "none";
+      });
+      document.getElementById("btn-reset-yes").addEventListener("click", () => {
+        savedData.highScore = 0;
+        savedData.totalCoins = 0;
+        persistData();
+        updateMenuStats();
+        document.getElementById("reset-confirm-box").style.display = "none";
+        showToast("🗑️ Skor tertinggi direset!", "toast-info", 1400);
+      });
+
+      // Pause & Game Over Buttons
+      document.getElementById("btn-pause").addEventListener("click", pauseGame);
+      document.getElementById("btn-resume").addEventListener("click", resumeGame);
+      document.getElementById("btn-pause-restart").addEventListener("click", startGame);
+      document.getElementById("btn-pause-menu").addEventListener("click", returnToMenu);
+      document.getElementById("btn-play-again").addEventListener("click", startGame);
+      document.getElementById("btn-go-menu").addEventListener("click", returnToMenu);
+
+      // Expandable Review Accordion
+      document.getElementById("btn-toggle-review").addEventListener("click", () => {
+        const list = document.getElementById("review-list");
+        const open = list.classList.toggle("open");
+        document.getElementById("review-chevron").textContent = open ? "▲" : "▼";
+      });
+    }
+
+    function onWindowResize() {
+      if (!camera || !renderer) return;
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    /* ==================== 19. ANIMATION LOOP ==================== */
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), 0.05);
+      updateGame(dt);
+      renderer.render(scene, camera);
+    }
+
+    // Boot cleanly on window load
+    window.onload = function () {
+      try {
+        loadSavedData();
+        initThree();
+        initUI();
+        setupInputs();
+        animate();
+      } catch (err) {
+        console.error("Gagal memuat Quiz Runner:", err);
+        showToast("Terjadi kesalahan memuat 3D. Silakan muat ulang halaman.", "toast-error", 5000);
+      }
+    };
+  </script>
+</body>
+</html>
